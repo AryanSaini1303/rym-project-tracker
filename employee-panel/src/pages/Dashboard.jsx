@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Award, CheckSquare, MapPin, Clock, Loader2, Calendar, Trophy } from 'lucide-react';
+import { Award, CheckSquare, MapPin, Clock, Loader2, Trophy, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Dashboard.css';
 
@@ -11,7 +11,7 @@ const Dashboard = () => {
     points: 0,
     rank: '--',
     pendingTasks: 0,
-    meetingsLogged: 0
+    completedTasks: 0
   });
 
   // Attendance states
@@ -52,30 +52,62 @@ const Dashboard = () => {
 
     setTodayAttendance(attData);
 
-    // 3. Count pending tasks
-    const { count: taskCount } = await supabase
-      .from('tasks')
+    // 3. Count pending tasks (from task_assignees schema)
+    const { count: pendingTaskCount } = await supabase
+      .from('task_assignees')
       .select('*', { count: 'exact', head: true })
-      .eq('assignee_id', empId)
-      .neq('status', 'done');
+      .eq('employee_id', empId)
+      .neq('status', 'done')
+      .neq('status', 'completed');
 
-    // 4. Count meetings logged
-    const { count: meetCount } = await supabase
-      .from('meetings')
+    // 4. Count completed tasks (from task_assignees schema)
+    const { count: completedTaskCount } = await supabase
+      .from('task_assignees')
       .select('*', { count: 'exact', head: true })
-      .eq('employee_id', empId);
+      .eq('employee_id', empId)
+      .in('status', ['done', 'completed']);
 
     // 5. Calculate Leaderboard rank and points
     // Fetch all employees and calculate scores
     const { data: allEmps } = await supabase.from('employees').select('id, name');
-    const { data: allTasks } = await supabase.from('tasks').select('assignee_id, points_awarded').eq('status', 'done');
-    const { data: allMeets } = await supabase.from('meetings').select('employee_id, points_earned').eq('outcome', 'Success');
+    
+    const { data: taskData } = await supabase
+      .from('tasks')
+      .select('assignee_id, points_awarded')
+      .eq('status', 'done')
+      .not('assignee_id', 'is', null);
+
+    const { data: taskAssigneeData } = await supabase
+      .from('task_assignees')
+      .select(`
+        employee_id,
+        status,
+        tasks (
+          points_awarded
+        )
+      `)
+      .in('status', ['done', 'completed']);
+
+    const { data: meetingData } = await supabase
+      .from('meetings')
+      .select('employee_id, points_earned')
+      .eq('outcome', 'Success');
 
     let currentEmpPoints = 0;
     const scores = (allEmps || []).map(emp => {
-      const taskPts = (allTasks || []).filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + t.points_awarded, 0);
-      const meetPts = (allMeets || []).filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + m.points_earned, 0);
-      const total = taskPts + meetPts;
+      const oldTaskPts = taskData
+        ? taskData.filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + (t.points_awarded || 0), 0)
+        : 0;
+
+      const newTaskPts = taskAssigneeData
+        ? taskAssigneeData.filter(ta => ta.employee_id === emp.id).reduce((sum, ta) => sum + (ta.tasks?.points_awarded || 0), 0)
+        : 0;
+
+      const meetPts = meetingData
+        ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + (m.points_earned || 0), 0)
+        : 0;
+
+      const total = oldTaskPts + newTaskPts + meetPts;
       if (emp.id === empId) {
         currentEmpPoints = total;
       }
@@ -90,8 +122,8 @@ const Dashboard = () => {
     setStats({
       points: currentEmpPoints,
       rank: userRank,
-      pendingTasks: taskCount || 0,
-      meetingsLogged: meetCount || 0
+      pendingTasks: pendingTaskCount || 0,
+      completedTasks: completedTaskCount || 0
     });
 
     setIsLoading(false);
@@ -221,12 +253,12 @@ const Dashboard = () => {
         </div>
 
         <div className="card stat-card">
-          <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(67, 24, 255, 0.1)', color: '#3182ce' }}>
-            <Calendar size={28} />
+          <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(0, 223, 162, 0.1)', color: 'var(--primary)' }}>
+            <CheckCircle size={28} />
           </div>
           <div className="stat-info">
-            <span className="stat-title">Client Meetings Logged</span>
-            <span className="stat-value">{stats.meetingsLogged}</span>
+            <span className="stat-title">Tasks Completed</span>
+            <span className="stat-value">{stats.completedTasks}</span>
           </div>
         </div>
       </div>

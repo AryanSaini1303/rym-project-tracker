@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AlertTriangle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
@@ -18,6 +19,8 @@ function AppContent() {
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
+  const [isPreRegistered, setIsPreRegistered] = useState(false);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
   
   const location = useLocation();
@@ -27,19 +30,28 @@ function AppContent() {
     setIsCheckingProfile(true);
     const { data, error } = await supabase
       .from('employees')
-      .select('id, user_id')
+      .select('id, user_id, is_active')
       .eq('email', user.email)
       .maybeSingle();
 
     if (!error && data) {
-      // If the admin pre-created the employee, the user_id will be missing.
-      // We must link the Google Auth ID to the employee record so the Admin panel can view their deep profile!
-      if (!data.user_id) {
-        await supabase.from('employees').update({ user_id: user.id }).eq('id', data.id);
+      if (data.is_active === false) {
+        setIsUnauthorized(true);
+        setHasProfile(false);
+        setIsPreRegistered(false);
+      } else if (data.user_id) {
+        setHasProfile(true);
+        setIsPreRegistered(false);
+        setIsUnauthorized(false);
+      } else {
+        setHasProfile(false);
+        setIsPreRegistered(true);
+        setIsUnauthorized(false);
       }
-      setHasProfile(true);
     } else {
       setHasProfile(false);
+      setIsPreRegistered(false);
+      setIsUnauthorized(true);
     }
     setIsCheckingProfile(false);
   };
@@ -61,6 +73,8 @@ function AppContent() {
         checkProfileExists(session.user);
       } else {
         setHasProfile(false);
+        setIsPreRegistered(false);
+        setIsUnauthorized(false);
       }
       setIsLoading(false);
     });
@@ -101,13 +115,54 @@ function AppContent() {
     return <Navigate to="/login" replace />;
   }
 
+  if (isUnauthorized) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#05070c', color: '#ffffff', padding: '1rem' }}>
+        <div className="card glass" style={{ maxWidth: '450px', textAlign: 'center', padding: '2.5rem 2rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(239, 68, 68, 0.2)', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '1rem', borderRadius: '50%', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <AlertTriangle size={48} color="var(--danger)" />
+            </div>
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem', color: '#ffffff' }}>Access Denied</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: '1.5', marginBottom: '2rem' }}>
+            Your email address (<strong>{session?.user?.email}</strong>) is not registered in our employee directory or has been deactivated. Please contact your administrator to grant you access.
+          </p>
+          <button 
+            className="btn-primary" 
+            style={{ width: '100%', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+            onClick={() => supabase.auth.signOut()}
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // If authenticated but profile doesn't exist yet, render the Registration Modal overlay
-  if (!hasProfile) {
+  if (isPreRegistered) {
     return (
       <RegistrationModal 
         session={session} 
         onComplete={() => checkProfileExists(session.user)} 
       />
+    );
+  }
+
+  // Fallback: If not authorized and doesn't have profile, show loader or access denied
+  if (!hasProfile) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#05070c', color: '#ffffff', padding: '1rem' }}>
+        <div className="card glass" style={{ maxWidth: '450px', textAlign: 'center', padding: '2.5rem 2rem', borderRadius: 'var(--radius-lg)' }}>
+          <AlertTriangle size={48} color="var(--danger)" style={{ margin: '0 auto 1.5rem auto' }} />
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>Unauthorized Access</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginBottom: '2rem' }}>
+            Please make sure you have been added to the system by an administrator.
+          </p>
+          <button className="btn-primary" style={{ width: '100%' }} onClick={() => supabase.auth.signOut()}>Sign Out</button>
+        </div>
+      </div>
     );
   }
 

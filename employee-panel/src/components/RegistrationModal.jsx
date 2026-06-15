@@ -21,20 +21,19 @@ const RegistrationModal = ({ session, onComplete }) => {
 
     setIsLoading(true);
 
-    const { error: insertError } = await supabase
+    const { error: updateError } = await supabase
       .from('employees')
-      .insert([{
+      .update({
         user_id: session.user.id,
         name: name.trim(),
-        email: session.user.email,
         department: dept,
         phone_number: phone.trim() || null,
-        role: 'Employee',
         is_active: true
-      }]);
+      })
+      .eq('email', session.user.email);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (updateError) {
+      setError(updateError.message);
       setIsLoading(false);
     } else {
       onComplete();
