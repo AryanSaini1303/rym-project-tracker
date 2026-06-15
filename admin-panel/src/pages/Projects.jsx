@@ -545,34 +545,26 @@ const Projects = () => {
         <div className="projects-grid">
           {filteredProjects.map(project => (
             <div key={project.id} className="project-card glass" onClick={() => setSelectedProject(project)} style={{ cursor: 'pointer' }}>
-              <div className="project-card-header">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <h3 style={{ marginRight: '1rem', flex: 1 }}>{project.title}</h3>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Edit Project"><Edit2 size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }} style={{ background: 'none', border: 'none', color: 'var(--danger)', opacity: 0.8, cursor: 'pointer' }} title="Delete Project"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                    <span className={`status-badge ${project.progress === 100 ? 'completed' : project.progress > 0 ? 'inprogress' : 'pending'}`}>
-                      {project.progress === 100 ? 'Completed' : project.progress > 0 ? 'In Progress' : 'Not Started'}
-                    </span>
-                    <button onClick={(e) => { e.stopPropagation(); openQuickTask(project); }} style={{ background: 'rgba(0, 223, 162, 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)', borderRadius: '4px', padding: '0.25rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Plus size={12} /> Add Task
-                    </button>
+              <div className="project-card-header" style={{ marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <h3 style={{ marginRight: '1rem', flex: 1, fontSize: '1.2rem', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {project.title}
+                  </h3>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='#fff'} onMouseLeave={(e)=>e.currentTarget.style.color='var(--text-secondary)'} title="Edit Project"><Edit2 size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e)=>e.currentTarget.style.color='var(--danger)'} onMouseLeave={(e)=>e.currentTarget.style.color='var(--text-secondary)'} title="Delete Project"><Trash2 size={16} /></button>
                   </div>
                 </div>
               </div>
               
               <p className="project-description">{project.description || 'No description provided.'}</p>
               
-              <div className="progress-section">
-                <div className="progress-header">
-                  <span className="progress-text">Progress</span>
-                  <span className="progress-percentage">{project.progress}%</span>
+              <div className="progress-section" style={{ background: 'transparent', padding: 0, marginBottom: '1.2rem' }}>
+                <div className="progress-header" style={{ marginBottom: '0.4rem' }}>
+                  <span className="progress-text" style={{ fontSize: '0.8rem' }}>Progress</span>
+                  <span className="progress-percentage" style={{ fontSize: '0.8rem', fontWeight: 700 }}>{project.progress}%</span>
                 </div>
-                <div className="progress-bar-bg">
+                <div className="progress-bar-bg" style={{ height: '4px', marginBottom: '0.4rem' }}>
                   <div 
                     className="progress-bar-fill" 
                     style={{ 
@@ -581,22 +573,25 @@ const Projects = () => {
                     }}
                   ></div>
                 </div>
-                <div className="task-stats">
+                <div className="task-stats" style={{ textAlign: 'left', fontSize: '0.75rem', fontWeight: 500 }}>
                   <span>{project.completedTasks} / {project.totalTasks} Tasks Completed</span>
                 </div>
               </div>
 
-              <div className="project-footer">
-                <h4>Team Members</h4>
-                {project.assignedEmployees.length > 0 ? (
-                  <div className="employee-tags">
-                    {project.assignedEmployees.map((name, idx) => (
-                      <span key={idx} className="employee-tag">{name}</span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="no-employees">No employees assigned yet.</span>
-                )}
+              <div className="project-card-footer" style={{ 
+                marginTop: 'auto', 
+                paddingTop: '1rem', 
+                borderTop: '1px solid rgba(255,255,255,0.08)', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <span className={`status-badge ${project.progress === 100 ? 'completed' : project.progress > 0 ? 'inprogress' : 'pending'}`}>
+                  {project.progress === 100 ? 'Completed' : project.progress > 0 ? 'In Progress' : 'Not Started'}
+                </span>
+                <button onClick={(e) => { e.stopPropagation(); openQuickTask(project); }} style={{ background: 'rgba(0, 223, 162, 0.1)', border: '1px solid rgba(0, 223, 162, 0.2)', color: 'var(--primary)', borderRadius: '6px', padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s' }} onMouseEnter={(e)=>{e.currentTarget.style.background='var(--primary)'; e.currentTarget.style.color='#000';}} onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(0, 223, 162, 0.1)'; e.currentTarget.style.color='var(--primary)';}}>
+                  <Plus size={14} /> Add Task
+                </button>
               </div>
             </div>
           ))}

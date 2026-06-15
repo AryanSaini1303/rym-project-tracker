@@ -18,10 +18,9 @@ import Projects from './pages/Projects';
 import SharedProject from './pages/SharedProject';
 import { supabase } from './lib/supabaseClient';
 
-const ALLOWED_ADMIN_EMAILS = [
-  'vegavruddhi@gmail.com'
-  // Add other authorized admin emails here in the future
-];
+const ALLOWED_ADMIN_EMAILS = import.meta.env.VITE_ALLOWED_ADMIN_EMAILS
+  ? import.meta.env.VITE_ALLOWED_ADMIN_EMAILS.split(',').map(email => email.trim().toLowerCase())
+  : [];
 
 function AppContent() {
   const [session, setSession] = useState(null);
@@ -38,7 +37,7 @@ function AppContent() {
         return;
       }
       
-      const userEmail = sessionToCheck.user?.email;
+      const userEmail = sessionToCheck.user?.email?.toLowerCase();
       if (!ALLOWED_ADMIN_EMAILS.includes(userEmail)) {
         await supabase.auth.signOut();
         setSession(null);
