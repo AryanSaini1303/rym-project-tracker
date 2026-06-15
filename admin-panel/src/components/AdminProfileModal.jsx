@@ -52,6 +52,14 @@ const AdminProfileModal = ({ profile, onClose }) => {
 
         {/* Body Section */}
         <div style={{ padding: '2rem' }}>
+          
+          {profile.unregistered && (
+            <div style={{ background: 'rgba(245, 158, 11, 0.1)', borderLeft: '4px solid var(--warning)', padding: '1rem', borderRadius: '4px', marginBottom: '2rem', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              <strong style={{ color: 'var(--warning)', display: 'block', marginBottom: '0.25rem' }}>Account Not Registered Yet</strong>
+              This employee was added to the directory by an Admin, but they have not yet logged into the Employee Panel to complete their registration. Advanced profile data (like Bank Details and Emergency Contacts) will remain empty until they do so.
+            </div>
+          )}
+
           {/* Base Info */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 2rem' }}>
             {renderField('Gender', 'gender')}

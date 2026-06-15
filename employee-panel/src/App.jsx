@@ -23,15 +23,20 @@ function AppContent() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
-  const checkProfileExists = async (userEmail) => {
+  const checkProfileExists = async (user) => {
     setIsCheckingProfile(true);
     const { data, error } = await supabase
       .from('employees')
-      .select('id')
-      .eq('email', userEmail)
+      .select('id, user_id')
+      .eq('email', user.email)
       .maybeSingle();
 
     if (!error && data) {
+      // If the admin pre-created the employee, the user_id will be missing.
+      // We must link the Google Auth ID to the employee record so the Admin panel can view their deep profile!
+      if (!data.user_id) {
+        await supabase.from('employees').update({ user_id: user.id }).eq('id', data.id);
+      }
       setHasProfile(true);
     } else {
       setHasProfile(false);
@@ -44,7 +49,7 @@ function AppContent() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        checkProfileExists(session.user.email);
+        checkProfileExists(session.user);
       }
       setIsLoading(false);
     });
@@ -53,7 +58,7 @@ function AppContent() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        checkProfileExists(session.user.email);
+        checkProfileExists(session.user);
       } else {
         setHasProfile(false);
       }
@@ -101,7 +106,7 @@ function AppContent() {
     return (
       <RegistrationModal 
         session={session} 
-        onComplete={() => checkProfileExists(session.user.email)} 
+        onComplete={() => checkProfileExists(session.user)} 
       />
     );
   }

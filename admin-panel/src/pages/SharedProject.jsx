@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Clock, Check, Circle, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock, Check, Circle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { supabaseAdmin } from '../lib/supabaseClient';
 import './Projects.css';
 
@@ -111,7 +111,29 @@ const SharedProject = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#05070c' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '3rem 4rem' }}>
+      {/* Top Branding Bar */}
+      <div style={{ padding: '2rem 4rem 0', maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img 
+            src="/logo.png" 
+            alt="RYM Grenergy" 
+            style={{ maxHeight: '45px', objectFit: 'contain' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div style={{ display: 'none', alignItems: 'center', gap: '0.5rem' }}>
+            <Zap size={28} color="var(--primary)" />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>RYM</span>
+              <span style={{ fontWeight: 600, fontSize: '0.65rem', color: '#ffffff', letterSpacing: '0.14em' }}>GRENERGY</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem 4rem 3rem' }}>
         <div style={{ paddingBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '2.5rem' }}>
           <div>
             <h2 style={{ fontSize: '1.8rem', marginBottom: '0.75rem', color: '#fff' }}>{project.title}</h2>

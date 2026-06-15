@@ -109,7 +109,16 @@ const Employees = () => {
     
     try {
       if (!emp.user_id) {
-        throw new Error('This employee has not registered or linked an auth account yet.');
+        setSelectedEmployeeProfile({
+          ...emp,
+          avatar: `https://ui-avatars.com/api/?name=${emp.name.replace(' ', '+')}&background=random`,
+          is_active: emp.is_active !== false,
+          profileData: {},
+          unregistered: true
+        });
+        toast.dismiss(loadingToast);
+        setIsFetchingProfile(false);
+        return;
       }
       
       // Call the secure Vite proxy backend instead of Supabase directly
@@ -334,16 +343,26 @@ const Employees = () => {
 
               <div className="form-group-modal">
                 <label>Department</label>
-                <select
+                <input
+                  type="text"
                   className="modal-input"
+                  list="department-options"
+                  placeholder="Select or type a custom department..."
                   value={formDept}
                   onChange={(e) => setFormDept(e.target.value)}
-                >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Design">Design</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Management">Management</option>
-                </select>
+                />
+                <datalist id="department-options">
+                  <option value="Engineering" />
+                  <option value="Design" />
+                  <option value="Marketing" />
+                  <option value="Management" />
+                  {/* Dynamically include any other custom departments currently in use */}
+                  {Array.from(new Set(employees.map(e => e.department)))
+                    .filter(d => d && !['Engineering', 'Design', 'Marketing', 'Management'].includes(d))
+                    .map(d => (
+                      <option key={d} value={d} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="form-group-modal">

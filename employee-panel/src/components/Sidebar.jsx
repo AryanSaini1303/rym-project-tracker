@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, CalendarDays, Settings, Zap, Briefcase, Trophy } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import './Sidebar.css';
 
@@ -27,6 +28,37 @@ const Sidebar = () => {
       setLatestTasksCount(todoTasks || 0);
       const lastSeenTasks = parseInt(localStorage.getItem('empLastSeenTasks') || '0', 10);
       setHasNewTasks((todoTasks || 0) > lastSeenTasks);
+
+      // Due Date Alerts (Due Today or Tomorrow)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const { data: dueTasks } = await supabase
+        .from('tasks')
+        .select(`
+          id,
+          title,
+          due_date,
+          task_assignees!inner(status, employee_id)
+        `)
+        .eq('task_assignees.employee_id', empData.id)
+        .in('task_assignees.status', ['todo', 'inprogress', 'in-progress'])
+        .lte('due_date', tomorrowStr)
+        .not('due_date', 'is', null);
+
+      if (dueTasks && dueTasks.length > 0) {
+        // Prevent toast spam by storing the alert state in sessionStorage
+        const toastKey = `emp_toast_due_${tomorrowStr}`;
+        if (!sessionStorage.getItem(toastKey)) {
+          if (dueTasks.length === 1) {
+            toast(`Reminder: Task "${dueTasks[0].title}" is due soon!`, { icon: '⏰', duration: 6000, style: { background: 'var(--card-bg)', color: 'var(--text-primary)', border: '1px solid var(--warning)' } });
+          } else {
+            toast(`Reminder: You have ${dueTasks.length} tasks due soon!`, { icon: '⏰', duration: 6000, style: { background: 'var(--card-bg)', color: 'var(--text-primary)', border: '1px solid var(--warning)' } });
+          }
+          sessionStorage.setItem(toastKey, 'true');
+        }
+      }
     };
 
     checkNotifications();

@@ -282,6 +282,19 @@
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Timeline Flow Line Connector */
+.task-row-full:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 36px; /* Starts exactly at the bottom of the 24px icon (12px padding + 24px icon) */
+  bottom: -20px; /* Extends through the 8px gap and exactly covers the 12px top padding of the next row */
+  left: 27px; /* Centers the 2px line perfectly behind the 24px icon */
+  width: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 0;
 }
 
 .task-row-full:hover {
@@ -301,7 +314,7 @@
 }
 
 .status-icon-btn {
-  background: none;
+  background: #05070c; /* Solid background so line doesn't show through transparent parts */
   border: 1.5px solid var(--text-secondary);
   border-radius: 50%;
   width: 24px;
@@ -313,6 +326,8 @@
   cursor: pointer;
   transition: all 0.3s ease;
   padding: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .status-icon-btn:hover {

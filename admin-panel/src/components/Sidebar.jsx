@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import './Sidebar.css';
 
@@ -32,6 +33,43 @@ const Sidebar = () => {
 
       setHasNewLeaves((pendingLeaves || 0) > lastSeenLeaves);
       setHasNewTasks((reviewTasks || 0) > lastSeenTasks);
+
+      // Admin Due Date Alerts (Company-wide tasks due today or tomorrow)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const { data: dueTasksAdmin } = await supabase
+        .from('tasks')
+        .select(`
+          id,
+          title,
+          due_date,
+          task_assignees(status)
+        `)
+        .lte('due_date', tomorrowStr)
+        .not('due_date', 'is', null);
+
+      if (dueTasksAdmin) {
+        const pendingDueTasks = dueTasksAdmin.filter(task => {
+          const isDone = task.task_assignees && task.task_assignees.length > 0 
+              && task.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed');
+          // If there are no assignees, we check the main status, but here we assume if it's not done by assignees, it's pending
+          return !isDone;
+        });
+
+        if (pendingDueTasks.length > 0) {
+          const toastKey = `admin_toast_due_summary_${tomorrowStr}`;
+          if (!sessionStorage.getItem(toastKey)) {
+            toast(`System Alert: ${pendingDueTasks.length} tasks in the company are due soon and remain pending!`, {
+              icon: '⚠️',
+              duration: 8000,
+              style: { background: 'var(--card-bg)', border: '1px solid var(--warning)', color: 'var(--text-primary)' }
+            });
+            sessionStorage.setItem(toastKey, 'true');
+          }
+        }
+      }
     };
 
     checkNotifications();
