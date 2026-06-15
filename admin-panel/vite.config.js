@@ -44,6 +44,103 @@ const supabaseProxyPlugin = () => ({
         });
 
         proxyReq.end();
+      } else if (req.url && req.url === '/api/summarize-project' && req.method === 'POST') {
+        const env = loadEnv(server.config.mode, process.cwd(), '');
+        const openAiKey = env.OPENAI_API_KEY;
+
+        if (!openAiKey) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: 'Missing OPENAI_API_KEY in .env file' }));
+          return;
+        }
+
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+          try {
+            const parsedBody = JSON.parse(body);
+            let rawText = parsedBody.text || '';
+            const link = parsedBody.link || '';
+
+            if (link) {
+              try {
+                let fetchUrl = link;
+                // If it's a Google Doc, try to grab the pure text export directly
+                if (link.includes('docs.google.com/document/d/')) {
+                  const docIdMatch = link.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                  if (docIdMatch) {
+                    fetchUrl = `https://docs.google.com/document/d/${docIdMatch[1]}/export?format=txt`;
+                  }
+                }
+                
+                const linkRes = await fetch(fetchUrl);
+                if (!linkRes.ok) throw new Error("Failed to fetch link");
+                const htmlOrText = await linkRes.text();
+                
+                // Strip scripts, styles, and HTML tags to get raw text
+                rawText = htmlOrText
+                  .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                  .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                  .replace(/<[^>]*>?/gm, ' ')
+                  .replace(/\s\s+/g, ' ');
+              } catch (err) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Failed to extract text from link. Please ensure it is public.' }));
+                return;
+              }
+            }
+
+            // Truncate to save tokens (approx 4 pages of text max)
+            const truncatedText = rawText.substring(0, 15000);
+
+            const openaiReqBody = JSON.stringify({
+              model: "gpt-4o-mini",
+              response_format: { type: "json_object" },
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert technical project manager. Read the following raw extracted text from a project brief/document. Create a highly accurate JSON object with exactly two keys: 'title' (a concise 3-6 word project title) and 'description' (a highly detailed summary between 150-200 words capturing the full scope, requirements, and deliverables). The output MUST be valid JSON."
+                },
+                {
+                  role: "user",
+                  content: truncatedText
+                }
+              ]
+            });
+
+            const options = {
+              hostname: 'api.openai.com',
+              path: '/v1/chat/completions',
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openAiKey}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(openaiReqBody)
+              }
+            };
+
+            const proxyReq = https.request(options, (proxyRes) => {
+              res.writeHead(proxyRes.statusCode, { 'Content-Type': 'application/json' });
+              proxyRes.pipe(res);
+            });
+
+            proxyReq.on('error', (err) => {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: err.message }));
+            });
+
+            proxyReq.write(openaiReqBody);
+            proxyReq.end();
+
+          } catch (e) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Invalid request body' }));
+          }
+        });
+
       } else {
         next();
       }

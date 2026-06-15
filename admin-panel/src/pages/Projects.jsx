@@ -18,6 +18,7 @@ const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [newProject, setNewProject] = useState({ title: '', description: '' });
+  const [projectLink, setProjectLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [editProjectId, setEditProjectId] = useState(null);
@@ -39,31 +40,109 @@ const Projects = () => {
     if (!file) return;
 
     setIsParsing(true);
+    let extractedText = '';
+    const parsingToast = toast.loading("Extracting and analyzing document with AI...");
+
     try {
       if (file.name.toLowerCase().endsWith('.txt')) {
-        const text = await file.text();
-        setNewProject(prev => ({ ...prev, description: text }));
+        extractedText = await file.text();
       } else if (file.name.toLowerCase().endsWith('.docx')) {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
-        setNewProject(prev => ({ ...prev, description: result.value }));
+        extractedText = result.value;
       } else if (file.name.toLowerCase().endsWith('.pdf')) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let text = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map(item => item.str).join(' ') + '\n';
+          extractedText += content.items.map(item => item.str).join(' ') + '\n';
         }
-        setNewProject(prev => ({ ...prev, description: text }));
       } else {
-        toast.error("Unsupported file format. Please upload .txt, .docx, or .pdf");
+        toast.error("Unsupported file format. Please upload .txt, .docx, or .pdf", { id: parsingToast });
+        setIsParsing(false);
+        return;
       }
-      toast.success("File parsed successfully!");
+
+      // Step 2: Send extracted text to our secure Vite Proxy for OpenAI processing
+      if (!extractedText.trim()) {
+        toast.error("Could not extract any text from the document.", { id: parsingToast });
+        setIsParsing(false);
+        return;
+      }
+
+      const aiResponse = await fetch('/api/summarize-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: extractedText })
+      });
+
+      if (!aiResponse.ok) {
+        throw new Error('AI analysis failed. Please check if your API key is correct.');
+      }
+
+      const aiData = await aiResponse.json();
+      
+      let parsedAiContent = aiData;
+      // Depending on OpenAI SDK version/return format, the proxy sends back the raw openai JSON
+      if (aiData.choices && aiData.choices.length > 0) {
+        parsedAiContent = JSON.parse(aiData.choices[0].message.content);
+      }
+
+      setNewProject(prev => ({ 
+        ...prev, 
+        title: parsedAiContent.title || prev.title,
+        description: parsedAiContent.description || extractedText.substring(0, 500)
+      }));
+
+      toast.success("AI generated title and summary successfully!", { id: parsingToast });
     } catch (error) {
-      console.error("Error parsing file:", error);
-      toast.error("Failed to parse file: " + error.message);
+      console.error("Error analyzing file:", error);
+      toast.error(error.message || "Failed to analyze document.", { id: parsingToast });
+      
+      // Fallback: just put the raw text in if AI fails
+      if (extractedText) {
+         setNewProject(prev => ({ ...prev, description: extractedText.substring(0, 1000) + '...' }));
+      }
+    }
+    setIsParsing(false);
+  };
+
+  const handleLinkFetch = async () => {
+    if (!projectLink) return;
+    setIsParsing(true);
+    const parsingToast = toast.loading("Extracting and analyzing link with AI...");
+
+    try {
+      const aiResponse = await fetch('/api/summarize-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: projectLink })
+      });
+
+      if (!aiResponse.ok) {
+        const errData = await aiResponse.json().catch(()=>({}));
+        throw new Error(errData.error || 'AI analysis failed. Ensure the link is public.');
+      }
+
+      const aiData = await aiResponse.json();
+      
+      let parsedAiContent = aiData;
+      if (aiData.choices && aiData.choices.length > 0) {
+        parsedAiContent = JSON.parse(aiData.choices[0].message.content);
+      }
+
+      setNewProject(prev => ({ 
+        ...prev, 
+        title: parsedAiContent.title || prev.title,
+        description: parsedAiContent.description || 'Processed from link.'
+      }));
+
+      toast.success("AI generated title and summary from link successfully!", { id: parsingToast });
+      setProjectLink('');
+    } catch (error) {
+      console.error("Error analyzing link:", error);
+      toast.error(error.message || "Failed to analyze link.", { id: parsingToast });
     }
     setIsParsing(false);
   };
@@ -545,8 +624,8 @@ const Projects = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Upload Document (Auto-fill description)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label>Upload Document or Paste Link (Auto-fill title & description)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <label style={{
                     display: 'flex', alignItems: 'center', gap: '0.5rem',
                     padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)',
@@ -554,7 +633,7 @@ const Projects = () => {
                     cursor: 'pointer', color: 'var(--text-secondary)'
                   }}>
                     {isParsing ? <Loader2 size={18} className="spinner" /> : <UploadCloud size={18} />}
-                    {isParsing ? 'Parsing...' : 'Select .pdf, .docx, .txt'}
+                    {isParsing ? 'Processing...' : 'Upload .pdf, .docx, .txt'}
                     <input 
                       type="file" 
                       accept=".txt,.pdf,.docx" 
@@ -563,9 +642,29 @@ const Projects = () => {
                       disabled={isParsing}
                     />
                   </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '250px' }}>
+                    <input 
+                      type="url" 
+                      placeholder="Or paste a Google Docs / public link" 
+                      className="form-input" 
+                      style={{ margin: 0, padding: '0.5rem', flex: 1 }}
+                      value={projectLink}
+                      onChange={(e) => setProjectLink(e.target.value)}
+                      disabled={isParsing}
+                    />
+                    <button 
+                      type="button" 
+                      className="btn-secondary" 
+                      onClick={handleLinkFetch} 
+                      disabled={!projectLink || isParsing}
+                      style={{ padding: '0.5rem 1rem', whiteSpace: 'nowrap' }}
+                    >
+                      Process Link
+                    </button>
+                  </div>
                 </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                  The text will be automatically extracted and pasted below.
+                  The AI will automatically extract text from your file or link to write the title and description.
                 </p>
               </div>
               <div className="form-group">
