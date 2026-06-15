@@ -34,7 +34,7 @@ const Performance = () => {
     const { data: taskData } = await supabase
       .from('tasks')
       .select('assignee_id, points_awarded')
-      .in('status', ['done', 'completed'])
+      .eq('status', 'done')
       .not('assignee_id', 'is', null);
 
     // 2.5 Get completed task points from new task_assignees schema
@@ -219,7 +219,7 @@ const Performance = () => {
           {/* Rank 2 (Silver) */}
           {podium2 && (
             <div className="card podium-card rank-2 glass">
-              <div className="podium-rank" style={{ backgroundColor: '#a9a9a9' }}>2</div>
+              <div className="podium-rank">2</div>
               <img src={`https://ui-avatars.com/api/?name=${podium2.name.replace(' ', '+')}&background=c0c0c0&color=000`} className="podium-avatar" alt="silver" />
               <div className="podium-name">{podium2.name}</div>
               <div className="podium-dept">{podium2.dept}</div>
@@ -229,8 +229,8 @@ const Performance = () => {
 
           {/* Rank 1 (Gold) */}
           {podium1 && (
-            <div className="card podium-card rank-1 glass" style={{ transform: 'scale(1.08)' }}>
-              <div className="podium-rank" style={{ backgroundColor: '#ffa500' }}>
+            <div className="card podium-card rank-1 glass">
+              <div className="podium-rank">
                 <Trophy size={16} />
               </div>
               <img src={`https://ui-avatars.com/api/?name=${podium1.name.replace(' ', '+')}&background=ffd700&color=000`} className="podium-avatar" alt="gold" />
@@ -243,7 +243,7 @@ const Performance = () => {
           {/* Rank 3 (Bronze) */}
           {podium3 && (
             <div className="card podium-card rank-3 glass">
-              <div className="podium-rank" style={{ backgroundColor: '#8b5a2b' }}>3</div>
+              <div className="podium-rank">3</div>
               <img src={`https://ui-avatars.com/api/?name=${podium3.name.replace(' ', '+')}&background=cd7f32&color=000`} className="podium-avatar" alt="bronze" />
               <div className="podium-name">{podium3.name}</div>
               <div className="podium-dept">{podium3.dept}</div>
@@ -298,7 +298,7 @@ const Performance = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                     Calculating leaderboard scores...
                   </td>
                 </tr>

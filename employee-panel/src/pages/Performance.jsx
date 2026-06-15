@@ -21,11 +21,24 @@ const Performance = () => {
       return;
     }
 
-    // 2. Get completed task points
+    // 2. Get completed task points (legacy tasks & manual adjustments)
     const { data: taskData } = await supabase
       .from('tasks')
       .select('assignee_id, points_awarded')
-      .eq('status', 'done');
+      .eq('status', 'done')
+      .not('assignee_id', 'is', null);
+
+    // 2.5 Get completed task points from new task_assignees schema
+    const { data: taskAssigneeData } = await supabase
+      .from('task_assignees')
+      .select(`
+        employee_id,
+        status,
+        tasks (
+          points_awarded
+        )
+      `)
+      .in('status', ['done', 'completed']);
 
     // 3. Get successful meeting points
     const { data: meetingData } = await supabase
@@ -57,19 +70,23 @@ const Performance = () => {
 
     // Combine and calculate
     const formatted = empData.map(emp => {
-      const taskPts = taskData
-        ? taskData.filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + t.points_awarded, 0)
+      const oldTaskPts = taskData
+        ? taskData.filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + (t.points_awarded || 0), 0)
+        : 0;
+
+      const newTaskPts = taskAssigneeData
+        ? taskAssigneeData.filter(ta => ta.employee_id === emp.id).reduce((sum, ta) => sum + (ta.tasks?.points_awarded || 0), 0)
         : 0;
 
       const meetingPts = meetingData
-        ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + m.points_earned, 0)
+        ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + (m.points_earned || 0), 0)
         : 0;
 
       return {
         id: emp.id,
         name: emp.name,
         dept: emp.department,
-        points: taskPts + meetingPts,
+        points: oldTaskPts + newTaskPts + meetingPts,
         target: individualTargets[emp.id] || targetPts
       };
     });
@@ -119,7 +136,7 @@ const Performance = () => {
           {/* Rank 2 (Silver) */}
           {podium2 && (
             <div className="card podium-card rank-2 glass">
-              <div className="podium-rank" style={{ backgroundColor: '#a9a9a9' }}>2</div>
+              <div className="podium-rank">2</div>
               <img src={`https://ui-avatars.com/api/?name=${podium2.name.replace(' ', '+')}&background=c0c0c0&color=000`} className="podium-avatar" alt="silver" />
               <div className="podium-name">{podium2.name}</div>
               <div className="podium-dept">{podium2.dept}</div>
@@ -129,8 +146,8 @@ const Performance = () => {
 
           {/* Rank 1 (Gold) */}
           {podium1 && (
-            <div className="card podium-card rank-1 glass" style={{ transform: 'scale(1.08)' }}>
-              <div className="podium-rank" style={{ backgroundColor: '#ffa500' }}>
+            <div className="card podium-card rank-1 glass">
+              <div className="podium-rank">
                 <Trophy size={16} />
               </div>
               <img src={`https://ui-avatars.com/api/?name=${podium1.name.replace(' ', '+')}&background=ffd700&color=000`} className="podium-avatar" alt="gold" />
@@ -143,7 +160,7 @@ const Performance = () => {
           {/* Rank 3 (Bronze) */}
           {podium3 && (
             <div className="card podium-card rank-3 glass">
-              <div className="podium-rank" style={{ backgroundColor: '#8b5a2b' }}>3</div>
+              <div className="podium-rank">3</div>
               <img src={`https://ui-avatars.com/api/?name=${podium3.name.replace(' ', '+')}&background=cd7f32&color=000`} className="podium-avatar" alt="bronze" />
               <div className="podium-name">{podium3.name}</div>
               <div className="podium-dept">{podium3.dept}</div>
