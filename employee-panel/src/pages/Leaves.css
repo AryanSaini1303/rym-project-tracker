@@ -1,0 +1,27 @@
+.leave-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-pending { 
+  background-color: rgba(245, 158, 11, 0.1); 
+  color: var(--warning); 
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-approved { 
+  background-color: rgba(5, 205, 153, 0.1); 
+  color: var(--secondary); 
+  border: 1px solid rgba(5, 205, 153, 0.2);
+}
+
+.status-rejected { 
+  background-color: rgba(239, 68, 68, 0.1); 
+  color: var(--danger); 
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}

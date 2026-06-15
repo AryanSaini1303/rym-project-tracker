@@ -1,0 +1,105 @@
+.podium-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2rem;
+  margin: 2rem 0 3rem 0;
+  flex-wrap: wrap;
+}
+
+.podium-card {
+  text-align: center;
+  width: 200px;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.podium-card:hover {
+  transform: translateY(-5px);
+}
+
+.podium-rank {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  border: 3px solid #fff;
+  height: 240px;
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, #c0c0c0, #a9a9a9);
+  border: 3px solid #fff;
+  height: 200px;
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #cd7f32, #8b5a2b);
+  border: 3px solid #fff;
+  height: 180px;
+}
+
+.podium-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid var(--surface-color);
+  margin: 1rem auto 0.5rem auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.podium-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.podium-points {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.podium-dept {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.progress-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.progress-track {
+  background-color: var(--bg-color);
+  border-radius: 10px;
+  height: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background-color: var(--primary);
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.8s ease-out;
+}

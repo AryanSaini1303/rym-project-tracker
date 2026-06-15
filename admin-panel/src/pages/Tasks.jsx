@@ -1,0 +1,487 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabaseClient';
+import './Tasks.css';
+
+
+const Tasks = () => {
+  const [tasks, setTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({
+    todo: true,
+    inprogress: true,
+    review: false,
+    done: false
+  });
+
+  const toggleSection = (key) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Form states
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskAssignee, setTaskAssignee] = useState('');
+  const [taskStatus, setTaskStatus] = useState('todo');
+  const [taskDate, setTaskDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [taskProject, setTaskProject] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [formError, setFormError] = useState('');
+
+  const fetchEmployees = async () => {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id, name')
+      .order('name');
+    if (!error && data) {
+      setEmployees(data);
+      if (data.length > 0) {
+        setTaskAssignee(data[0].id);
+      }
+    }
+  };
+
+  const fetchProjects = async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, title')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      setProjects(data);
+    }
+  };
+
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        task_assignees (
+          status,
+          employees (
+            id,
+            name
+          )
+        ),
+        projects (
+          title
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const formatted = data.map(t => {
+        const getCalculatedStatus = () => {
+          if (!t.task_assignees || t.task_assignees.length === 0) return t.status ? t.status.replace('-', '') : 'todo';
+          const allDone = t.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed');
+          const allTodo = t.task_assignees.every(ta => !ta.status || ta.status === 'todo');
+          if (allDone) return 'done';
+          if (allTodo) return 'todo';
+          if (t.task_assignees.some(ta => ta.status === 'review' || ta.status === 'in-review')) return 'review';
+          return 'inprogress';
+        };
+
+        return {
+          id: t.id,
+          title: t.title,
+          desc: t.description || '',
+          status: getCalculatedStatus(),
+          task_assignees: t.task_assignees || [],
+          due_date: t.due_date,
+          project_id: t.project_id,
+          projectName: t.projects?.title
+        };
+      });
+      setTasks(formatted);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchProjects();
+    fetchTasks();
+    
+    const tasksSub = supabase
+      .channel('public:tasks_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => fetchTasks())
+      .subscribe();
+      
+    return () => supabase.removeChannel(tasksSub);
+  }, []);
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    if (!taskTitle.trim() || !taskDesc.trim()) {
+      setFormError('Please enter both title and description.');
+      return;
+    }
+
+    const { data: taskData, error: taskError } = await supabase
+      .from('tasks')
+      .insert([{
+        title: taskTitle,
+        description: taskDesc,
+        status: taskStatus,
+        due_date: taskDate,
+        project_id: taskProject || null
+      }])
+      .select();
+
+    if (taskError || !taskData) {
+      setFormError(taskError?.message || 'Failed to create task');
+      toast.error('Failed to create task');
+      return;
+    }
+    
+    const newTask = taskData[0];
+
+    if (taskAssignee) {
+      await supabase.from('task_assignees').insert([{
+        task_id: newTask.id,
+        employee_id: taskAssignee,
+        status: taskStatus
+      }]);
+      
+      await supabase.from('notifications').insert([{
+        user_id: taskAssignee,
+        title: 'New Task Assigned',
+        message: `You have been assigned a new task: "${taskTitle}"`,
+        type: 'task',
+        link: '/tasks'
+      }]);
+    }
+
+    fetchTasks();
+    setShowModal(false);
+
+    setTaskTitle('');
+    setTaskDesc('');
+    setTaskStatus('todo');
+    setTaskAssignee(employees.length > 0 ? employees[0].id : '');
+    setTaskProject('');
+    setTaskDate(new Date().toISOString().split('T')[0]);
+    toast.success('Task created successfully!');
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    const { error: taskError } = await supabase
+      .from('tasks')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    const { error: assigneesError } = await supabase
+      .from('task_assignees')
+      .update({ status: newStatus })
+      .eq('task_id', id);
+
+    if (!taskError && !assigneesError) {
+      fetchTasks();
+      toast.success('Task status overridden globally');
+    } else {
+      toast.error('Error updating task status');
+    }
+  };
+
+  const handleDeleteTask = async (id) => {
+    toast((t) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <p style={{ margin: 0, fontWeight: 500, fontSize: '0.95rem' }}>Are you sure you want to delete this task?</p>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '0.85rem', transition: 'all 0.2s' }}>Cancel</button>
+          <button onClick={async () => {
+            toast.dismiss(t.id);
+            const { error } = await supabase.from('tasks').delete().eq('id', id);
+            if (!error) {
+              setTasks(tasks.filter(t => t.id !== id));
+              toast.success('Task deleted');
+            } else {
+              toast.error('Error deleting task: ' + error.message);
+            }
+          }} style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', background: 'var(--danger)', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500, transition: 'all 0.2s' }}>Delete</button>
+        </div>
+      </div>
+    ), { duration: 5000 });
+  };
+
+
+  const columns = [
+    { key: 'todo', label: 'To Do', color: 'var(--primary)' },
+    { key: 'inprogress', label: 'In Progress', color: '#3182ce' },
+    { key: 'review', label: 'In Review', color: 'var(--warning)' },
+    { key: 'done', label: 'Done', color: 'var(--secondary)' }
+  ];
+
+  return (
+    <div>
+      <div className="flex justify-between items-center" style={{ marginBottom: '2rem' }}>
+        <div>
+          <h1 className="page-title">Tasks Board</h1>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>Manage and track project progress.</p>
+        </div>
+        <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
+          <Plus size={18} /> Create Task
+        </button>
+      </div>
+
+      {/* Filter and Search */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+        <div className="input-wrapper" style={{ width: '100%' }}>
+          <Search className="input-icon" size={18} style={{ left: '0.85rem' }} />
+          <input
+            type="text"
+            className="filter-input"
+            placeholder="Search tasks by title or description..."
+            style={{ width: '100%', paddingLeft: '2.5rem' }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="task-stack-container">
+        {columns.map((col) => {
+          const colTasks = tasks.filter(t => t.status === col.key && (
+            t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            t.desc.toLowerCase().includes(searchTerm.toLowerCase())
+          ));
+
+          return (
+            <div key={col.key} className="card" style={{ marginBottom: '1rem', overflow: 'hidden' }}>
+              <div 
+                className="stack-header"
+                onClick={() => toggleSection(col.key)}
+                style={{ 
+                  cursor: 'pointer', 
+                  padding: '1rem 1.25rem', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderBottom: expandedSections[col.key] ? '1px solid var(--border-color)' : 'none'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {expandedSections[col.key] ? <ChevronDown size={20} color="var(--text-secondary)" /> : <ChevronRight size={20} color="var(--text-secondary)" />}
+                  <h3 style={{ margin: 0, color: col.color, fontSize: '1.1rem' }}>{col.label}</h3>
+                  <span className="task-count" style={{ backgroundColor: 'var(--bg-color)', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem' }}>{colTasks.length}</span>
+                </div>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTaskStatus(col.key);
+                    setShowModal(true);
+                  }}
+                  className="btn-primary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                >
+                  + Add Task
+                </button>
+              </div>
+              
+              {expandedSections[col.key] && (
+                <div style={{ padding: '1.25rem' }}>
+                  {colTasks.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem 0' }}>
+                      No tasks in this section.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+                      {colTasks.map(task => (
+                        <div key={task.id} className="task-card" style={{ borderLeftColor: col.color }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <h4 style={{ margin: 0, paddingRight: '0.5rem' }}>{task.title}</h4>
+                            <button 
+                              onClick={() => handleDeleteTask(task.id)} 
+                              style={{ color: 'var(--danger)', opacity: 0.7, padding: '0.2rem' }}
+                              title="Delete task"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <p style={{ marginTop: '0.5rem' }}>{task.desc}</p>
+                          
+                          {task.projectName && (
+                            <div style={{ margin: '0.5rem 0', display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
+                              Project: {task.projectName}
+                            </div>
+                          )}
+
+                          {/* Column switcher */}
+                          <div style={{ marginBottom: '0.75rem', marginTop: '0.5rem' }}>
+                            <select
+                              className="filter-input"
+                              style={{ width: '100%', fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                              value={task.status}
+                              onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                            >
+                              <option value="todo">To Do</option>
+                              <option value="inprogress">In Progress</option>
+                              <option value="review">In Review</option>
+                              <option value="done">Done</option>
+                            </select>
+                          </div>
+
+                          <div className="task-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                            <div className="task-row-actions" style={{ width: '100%' }}>
+                              <div className="assignee-dropdown-container">
+                                {task.task_assignees && task.task_assignees.length > 0 ? (
+                                  <div className="assignees-stack-badge" style={{ cursor: 'default', background: 'transparent', border: 'none', padding: 0 }}>
+                                    <div className="avatars-stack" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                                      {task.task_assignees.map((ta) => {
+                                        const normalizedStatus = ta.status ? ta.status.replace('-', '') : 'todo';
+                                        const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? 50 : 0;
+                                        const color = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 'var(--success)' : normalizedStatus === 'review' ? 'var(--warning)' : normalizedStatus === 'inprogress' ? '#3182ce' : 'var(--text-secondary)';
+                                        return (
+                                          <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', gap: '8px', flex: 1, minWidth: '140px' }}>
+                                            <div className="assignee-avatar" style={{ width: '18px', height: '18px', fontSize: '0.6rem', border: 'none' }}>
+                                              {ta.employees.name.charAt(0)}
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', width: '50px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ta.employees.name.split(' ')[0]}</span>
+                                            
+                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${percent}%`, height: '100%', background: color, transition: 'all 0.5s ease' }}></div>
+                                              </div>
+                                              <span style={{ fontSize: '0.65rem', color: color, fontWeight: 600, width: '24px', textAlign: 'right' }}>{percent}%</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                    Unassigned
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                              <Calendar size={14} /> {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'No due date'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Create Task Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-window glass" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="modal-title" style={{ margin: 0 }}>Create Task</h3>
+              <button onClick={() => setShowModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleCreateTask}>
+              {formError && (
+                <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem', fontWeight: 600 }}>
+                  {formError}
+                </div>
+              )}
+
+              <div className="form-group-modal">
+                <label>Task Title</label>
+                <input
+                  type="text"
+                  className="modal-input"
+                  placeholder="e.g. Design UI"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group-modal">
+                <label>Description</label>
+                <textarea
+                  className="modal-input"
+                  style={{ minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
+                  placeholder="Describe the task details..."
+                  value={taskDesc}
+                  onChange={(e) => setTaskDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group-modal">
+                <label>Assignee</label>
+                <select
+                  className="modal-input"
+                  value={taskAssignee}
+                  onChange={(e) => setTaskAssignee(e.target.value)}
+                >
+                  <option value="">Select Assignee</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group-modal">
+                <label>Column Status</label>
+                <select
+                  className="modal-input"
+                  value={taskStatus}
+                  onChange={(e) => setTaskStatus(e.target.value)}
+                >
+                  <option value="todo">To Do</option>
+                  <option value="inprogress">In Progress</option>
+                  <option value="review">In Review</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+
+              <div className="form-group-modal">
+                <label>Link to Project/SOP (Optional)</label>
+                <select
+                  className="modal-input"
+                  value={taskProject}
+                  onChange={(e) => setTaskProject(e.target.value)}
+                >
+                  <option value="">No Project</option>
+                  {projects.map(proj => (
+                    <option key={proj.id} value={proj.id}>{proj.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group-modal">
+                <label>Due Date</label>
+                <input
+                  type="date"
+                  className="modal-input"
+                  value={taskDate}
+                  onChange={(e) => setTaskDate(e.target.value)}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Create Task</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Tasks;
+
