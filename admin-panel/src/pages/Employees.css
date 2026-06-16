@@ -156,13 +156,7 @@
     font-size: 1.1rem;
   }
 
-  /* Hide some columns on mobile */
-  .data-table th:nth-child(3),
-  .data-table td:nth-child(3),
-  .data-table th:nth-child(4),
-  .data-table td:nth-child(4) {
-    display: none;
-  }
+  /* Allow table to scroll horizontally instead of hiding columns */
 
   .data-table th, .data-table td {
     padding: 0.75rem 0.9rem;

@@ -123,7 +123,7 @@ const Employees = () => {
       
       // Call the secure Vite proxy backend instead of Supabase directly
       // This completely bypasses the Supabase Javascript Library blocks
-      const response = await fetch(`/api/get-profile/${emp.user_id}`);
+      const response = await fetch(`/api/get-profile?id=${emp.user_id}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

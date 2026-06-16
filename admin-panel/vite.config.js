@@ -8,8 +8,9 @@ const supabaseProxyPlugin = () => ({
   name: 'supabase-proxy',
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
-      if (req.url && req.url.startsWith('/api/get-profile/')) {
-        const userId = req.url.split('/api/get-profile/')[1];
+      if (req.url && req.url.startsWith('/api/get-profile')) {
+        const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        const userId = urlObj.searchParams.get('id');
         
         // Load environment variables manually for Vite middleware
         const env = loadEnv(server.config.mode, process.cwd(), '');
