@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Calendar, Search, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Tasks.css';
 
@@ -135,6 +135,21 @@ const Tasks = () => {
     if (!error) {
       setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus, points_awarded: points } : t));
       toast.success('Task status updated successfully!');
+      
+      // Notify admins if task is ready for review or completed
+      if (newStatus === 'review' || newStatus === 'done') {
+        const taskName = tasks.find(t => t.id === taskId)?.title || 'A task';
+        const action = newStatus === 'review' ? 'submitted for review' : 'completed';
+        const title = newStatus === 'review' ? 'Task Ready for Review' : 'Task Completed';
+        
+        await supabase.from('notifications').insert([{
+          user_id: null,
+          title: title,
+          message: `${employee?.name || 'An employee'} ${action}: "${taskName}"`,
+          type: 'task',
+          link: '/tasks'
+        }]);
+      }
     } else {
       toast.error('Error updating task status: ' + error.message);
     }
@@ -240,9 +255,16 @@ const Tasks = () => {
                           </div>
 
                           <div className="task-footer">
-                            <div className="flex items-center gap-1" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                              <Calendar size={13} /> {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}
-                            </div>
+                            {(() => {
+                              const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0)) && task.status !== 'done';
+                              return (
+                                <div className="flex items-center gap-1" style={{ color: isOverdue ? 'var(--danger)' : 'var(--text-secondary)', fontSize: '0.78rem', fontWeight: isOverdue ? 600 : 400 }}>
+                                  {isOverdue ? <AlertCircle size={13} /> : <Calendar size={13} />} 
+                                  {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}
+                                  {isOverdue && <span style={{ marginLeft: '4px' }}>Overdue!</span>}
+                                </div>
+                              );
+                            })()}
                             {task.status === 'done' && (
                               <span style={{ fontSize: '0.78rem', color: 'var(--primary)', fontWeight: 700 }}>
                                 +{task.points_awarded} pts

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import './Tasks.css';
@@ -366,9 +366,17 @@ const Tasks = () => {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1" style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-                              <Calendar size={14} /> {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'No due date'}
-                            </div>
+                            
+                            {(() => {
+                              const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0)) && task.status !== 'done';
+                              return (
+                                <div className="flex items-center gap-1" style={{ color: isOverdue ? 'var(--danger)' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: isOverdue ? 600 : 400 }}>
+                                  {isOverdue ? <AlertCircle size={14} /> : <Calendar size={14} />} 
+                                  {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'No due date'}
+                                  {isOverdue && <span style={{ marginLeft: '4px' }}>Overdue!</span>}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}

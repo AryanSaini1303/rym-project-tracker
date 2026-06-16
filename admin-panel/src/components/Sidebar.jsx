@@ -37,9 +37,18 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
       const lastSeenLeaves = parseInt(localStorage.getItem('adminLastSeenLeaves') || '0', 10);
       const lastSeenTasks = parseInt(localStorage.getItem('adminLastSeenTasks') || '0', 10);
 
-      // We still check if current count > last seen to show dot on load
-      if ((pendingLeaves || 0) > lastSeenLeaves) setHasNewLeaves(true);
-      if ((reviewTasks || 0) > lastSeenTasks) setHasNewTasks(true);
+      // We check if current count > last seen to show dot on load
+      if ((pendingLeaves || 0) > lastSeenLeaves) {
+        setHasNewLeaves(true);
+      } else if ((pendingLeaves || 0) < lastSeenLeaves) {
+        localStorage.setItem('adminLastSeenLeaves', (pendingLeaves || 0).toString());
+      }
+      
+      if ((reviewTasks || 0) > lastSeenTasks) {
+        setHasNewTasks(true);
+      } else if ((reviewTasks || 0) < lastSeenTasks) {
+        localStorage.setItem('adminLastSeenTasks', (reviewTasks || 0).toString());
+      }
 
       // Admin Due Date Alerts
       const tomorrow = new Date();

@@ -64,6 +64,73 @@ function AppContent() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session) return;
+    
+    const checkOverdue = async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString();
+
+      const { data: overdueTasks } = await supabase
+        .from('tasks')
+        .select('id, title, due_date, status, task_assignees(employee_id, status)')
+        .lt('due_date', todayStr);
+
+      if (!overdueTasks) return;
+
+      for (const task of overdueTasks) {
+        // Skip if overall task status is done
+        if (task.status === 'done' || task.status === 'completed') continue;
+        
+        const isDone = task.task_assignees && task.task_assignees.length > 0 
+          ? task.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed')
+          : false;
+
+        if (isDone) continue;
+
+        const linkStr = `/tasks?overdue=${task.id}`;
+        const { data: existing } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('link', linkStr)
+          .limit(1);
+
+        if (existing && existing.length > 0) continue; 
+
+        const newNotifications = [];
+        
+        newNotifications.push({
+          user_id: null,
+          title: 'Missed Deadline',
+          message: `The task "${task.title}" has missed its due date.`,
+          type: 'overdue',
+          link: linkStr
+        });
+
+        if (task.task_assignees) {
+          task.task_assignees.forEach(ta => {
+            if (ta.status !== 'done' && ta.status !== 'completed') {
+              newNotifications.push({
+                user_id: ta.employee_id,
+                title: 'Missed Deadline',
+                message: `Your assigned task "${task.title}" is overdue!`,
+                type: 'overdue',
+                link: linkStr
+              });
+            }
+          });
+        }
+
+        if (newNotifications.length > 0) {
+          await supabase.from('notifications').insert(newNotifications);
+        }
+      }
+    };
+
+    checkOverdue();
+  }, [session]);
+
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#05070c', color: '#ffffff', fontFamily: 'inherit' }}>

@@ -32,7 +32,12 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
       
       setLatestTasksCount(todoTasks || 0);
       const lastSeenTasks = parseInt(localStorage.getItem('empLastSeenTasks') || '0', 10);
-      if ((todoTasks || 0) > lastSeenTasks) setHasNewTasks(true);
+      
+      if ((todoTasks || 0) > lastSeenTasks) {
+        setHasNewTasks(true);
+      } else if ((todoTasks || 0) < lastSeenTasks) {
+        localStorage.setItem('empLastSeenTasks', (todoTasks || 0).toString());
+      }
 
       // Due Date Alerts
       const tomorrow = new Date();

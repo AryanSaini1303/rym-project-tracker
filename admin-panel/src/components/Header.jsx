@@ -107,6 +107,8 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
       .order('created_at', { ascending: false })
       .limit(50);
       
+    console.log("[Admin Header] fetchNotifications:", data, error);
+      
     if (!error && data) {
       setNotifications(data);
     }
