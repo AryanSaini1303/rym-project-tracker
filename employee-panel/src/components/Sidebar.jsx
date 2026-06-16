@@ -130,7 +130,16 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
   };
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      // Check if iOS
+      const isIos = /ipad|iphone|ipod/i.test(navigator.userAgent.toLowerCase());
+      if (isIos) {
+        toast('To install on iPhone/iPad: Tap the Share icon ⍗ at the bottom and select "Add to Home Screen".', { icon: '🍎', duration: 8000, style: { background: 'var(--card-bg)', color: 'var(--text-primary)' } });
+      } else {
+        toast('App can only be installed in Production or when PWA criteria are met.', { icon: 'ℹ️', style: { background: 'var(--card-bg)', color: 'var(--text-primary)' } });
+      }
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -182,7 +191,7 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
           ))}
         </div>
         <div style={{ marginTop: 'auto' }}>
-          {isInstallable && (
+          {(!window.matchMedia('(display-mode: standalone)').matches) && (
             <button className="nav-link" onClick={handleInstallClick} style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>
               <Download className="nav-icon" />
               Install App
