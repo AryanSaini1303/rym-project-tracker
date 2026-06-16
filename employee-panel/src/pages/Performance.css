@@ -173,3 +173,52 @@
   font-size: 1.4rem;
   margin-top: 0.75rem;
 }
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .podium-container {
+    gap: 1rem;
+    margin: 1.5rem 0 2rem 0;
+  }
+
+  .podium-card {
+    width: 155px;
+    padding: 1.25rem 1rem;
+  }
+
+  .rank-1 { height: 200px; }
+  .rank-2 { height: 168px; }
+  .rank-3 { height: 148px; }
+
+  .podium-avatar {
+    width: 54px;
+    height: 54px;
+  }
+
+  .podium-name { font-size: 0.9rem; }
+  .podium-points { font-size: 1.1rem; }
+  .podium-dept { font-size: 0.72rem; }
+}
+
+@media (max-width: 480px) {
+  .podium-container { gap: 0.6rem; }
+
+  .podium-card {
+    width: 120px;
+    padding: 0.875rem 0.65rem;
+  }
+
+  .rank-1 { height: 170px; }
+  .rank-2 { height: 144px; }
+  .rank-3 { height: 126px; }
+
+  .podium-avatar {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 0.4rem;
+  }
+
+  .podium-name { font-size: 0.78rem; }
+  .podium-points { font-size: 0.9rem; margin-top: 0.4rem; }
+  .podium-dept { display: none; }
+}

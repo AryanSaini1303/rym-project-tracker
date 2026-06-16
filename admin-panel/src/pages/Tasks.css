@@ -82,3 +82,33 @@
   height: 24px;
   border-radius: 50%;
 }
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .kanban-board {
+    /* Allow horizontal scroll on mobile for kanban */
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1.25rem;
+  }
+
+  .kanban-column {
+    min-width: 260px;
+    scroll-snap-align: start;
+  }
+
+  .task-card h4 {
+    font-size: 0.9rem;
+  }
+
+  .task-card p {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .kanban-column {
+    min-width: 240px;
+    padding: 0.75rem;
+  }
+}

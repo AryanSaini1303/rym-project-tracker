@@ -872,7 +872,7 @@ const Projects = () => {
                             <button className="btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => setEditingTask(null)}>Cancel</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div className="task-row-inner">
                             <span className={`task-title ${calculatedStatus === 'done' ? 'task-done-strike' : ''}`} onClick={() => setEditingTask({ id: task.id, title: task.title })} style={{ cursor: 'pointer' }} title="Click to edit">
                               {task.title}
                             </span>
@@ -893,18 +893,18 @@ const Projects = () => {
                                         const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? 50 : 0;
                                         const color = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 'var(--success)' : normalizedStatus === 'review' ? 'var(--warning)' : normalizedStatus === 'inprogress' ? '#3182ce' : 'var(--text-secondary)';
                                         return (
-                                          <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', gap: '8px', minWidth: '130px' }}>
-                                            <div className="assignee-avatar" style={{ width: '18px', height: '18px', fontSize: '0.6rem', border: 'none' }}>
+                                          <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '3px 7px', borderRadius: '6px', gap: '6px', minWidth: '100px', maxWidth: '150px' }}>
+                                            <div className="assignee-avatar" style={{ width: '16px', height: '16px', fontSize: '0.55rem', border: 'none', flexShrink: 0 }}>
                                               {ta.employees.name.charAt(0)}
                                             </div>
-                                            <span style={{ fontSize: '0.7rem', width: '40px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ta.employees.name.split(' ')[0]}</span>
+                                            <span style={{ fontSize: '0.68rem', maxWidth: '36px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}>{ta.employees.name.split(' ')[0]}</span>
                                             
                                             {/* Individual Line Graph Progress Bar */}
-                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                                              <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', minWidth: '20px' }}>
                                                 <div style={{ width: `${percent}%`, height: '100%', background: color, transition: 'all 0.5s ease' }}></div>
                                               </div>
-                                              <span style={{ fontSize: '0.6rem', color: color, fontWeight: 600, width: '22px', textAlign: 'right' }}>{percent}%</span>
+                                              <span style={{ fontSize: '0.58rem', color: color, fontWeight: 600, width: '22px', textAlign: 'right', flexShrink: 0 }}>{percent}%</span>
                                             </div>
                                           </div>
                                         );

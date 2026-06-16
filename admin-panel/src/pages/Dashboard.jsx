@@ -419,7 +419,7 @@ const Dashboard = () => {
                 </button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select 
                 value={selectedTimeFilter} 
                 onChange={(e) => setSelectedTimeFilter(e.target.value)}
@@ -478,7 +478,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          <div style={{ width: '100%', height: 300 }}>
+          <div style={{ width: '100%', height: 300, minWidth: 0 }}>
             <ResponsiveContainer>
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
@@ -515,7 +515,7 @@ const Dashboard = () => {
         <div className="card chart-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
             <h3 style={{ margin: 0 }}>Leave Statistics</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select 
                 value={selectedLeaveTimeFilter} 
                 onChange={(e) => setSelectedLeaveTimeFilter(e.target.value)}
@@ -538,7 +538,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          <div style={{ width: '100%', height: 300 }}>
+          <div style={{ width: '100%', height: 300, minWidth: 0 }}>
             <ResponsiveContainer>
               <BarChart data={leaveDataArray} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />

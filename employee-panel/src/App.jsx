@@ -22,6 +22,8 @@ function AppContent() {
   const [isPreRegistered, setIsPreRegistered] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasSidebarDot, setHasSidebarDot] = useState(false);
   
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
@@ -194,9 +196,9 @@ function AppContent() {
           },
         }} 
       />
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onDotChange={setHasSidebarDot} />
       <div className="main-content">
-        <Header />
+        <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} hasSidebarDot={hasSidebarDot} />
         <div className="page-content">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

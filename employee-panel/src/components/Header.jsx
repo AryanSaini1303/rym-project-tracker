@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, User, Settings as SettingsIcon, Image as ImageIcon, LogOut } from 'lucide-react';
+import { Bell, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import CompleteProfileModal from './CompleteProfileModal';
 import './Header.css';
 
-const Header = () => {
+const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
@@ -129,12 +129,27 @@ const Header = () => {
       .select('*')
       .eq('user_id', employeeId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(50);
       
     if (!error && data) {
       setNotifications(data);
     }
   };
+
+  useEffect(() => {
+    if (!profile.id) return;
+    
+    const sub = supabase
+      .channel('public:emp_header_notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+         fetchNotifications(profile.id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, [profile.id]);
 
   const handleNotificationClick = async (notif) => {
     setShowNotifications(false);
@@ -176,6 +191,12 @@ const Header = () => {
 
   return (
     <div className="header">
+      {/* Hamburger - only visible on mobile */}
+      <button className="header-hamburger" onClick={onMenuToggle} aria-label="Toggle menu" style={{ position: 'relative' }}>
+        <Menu size={22} />
+        {hasSidebarDot && <span className="notification-dot" style={{ top: 2, right: 2 }}></span>}
+      </button>
+
       <div className="header-brand">
         <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
           Welcome back, <span style={{ color: 'var(--primary)' }}>{profile.name}</span>!

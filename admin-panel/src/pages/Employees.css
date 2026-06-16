@@ -145,3 +145,43 @@
   background-color: rgba(0, 0, 0, 0.08);
 }
 
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .modal-window {
+    padding: 1.5rem;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+  /* Hide some columns on mobile */
+  .data-table th:nth-child(3),
+  .data-table td:nth-child(3),
+  .data-table th:nth-child(4),
+  .data-table td:nth-child(4) {
+    display: none;
+  }
+
+  .data-table th, .data-table td {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-window {
+    padding: 1.25rem;
+    margin: 0.5rem;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}

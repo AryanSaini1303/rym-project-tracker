@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import './Sidebar.css';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose, onDotChange }) => {
   const location = useLocation();
   const [hasNewLeaves, setHasNewLeaves] = useState(false);
   const [hasNewTasks, setHasNewTasks] = useState(false);
 
   const [latestLeavesCount, setLatestLeavesCount] = useState(0);
   const [latestTasksCount, setLatestTasksCount] = useState(0);
+
+  useEffect(() => {
+    if (onDotChange) {
+      onDotChange(hasNewLeaves || hasNewTasks);
+    }
+  }, [hasNewLeaves, hasNewTasks, onDotChange]);
 
   useEffect(() => {
     const checkNotifications = async () => {
@@ -31,22 +37,18 @@ const Sidebar = () => {
       const lastSeenLeaves = parseInt(localStorage.getItem('adminLastSeenLeaves') || '0', 10);
       const lastSeenTasks = parseInt(localStorage.getItem('adminLastSeenTasks') || '0', 10);
 
-      setHasNewLeaves((pendingLeaves || 0) > lastSeenLeaves);
-      setHasNewTasks((reviewTasks || 0) > lastSeenTasks);
+      // We still check if current count > last seen to show dot on load
+      if ((pendingLeaves || 0) > lastSeenLeaves) setHasNewLeaves(true);
+      if ((reviewTasks || 0) > lastSeenTasks) setHasNewTasks(true);
 
-      // Admin Due Date Alerts (Company-wide tasks due today or tomorrow)
+      // Admin Due Date Alerts
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
       const { data: dueTasksAdmin } = await supabase
         .from('tasks')
-        .select(`
-          id,
-          title,
-          due_date,
-          task_assignees(status)
-        `)
+        .select(`id, title, due_date, task_assignees(status)`)
         .lte('due_date', tomorrowStr)
         .not('due_date', 'is', null);
 
@@ -54,7 +56,6 @@ const Sidebar = () => {
         const pendingDueTasks = dueTasksAdmin.filter(task => {
           const isDone = task.task_assignees && task.task_assignees.length > 0 
               && task.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed');
-          // If there are no assignees, we check the main status, but here we assume if it's not done by assignees, it's pending
           return !isDone;
         });
 
@@ -76,10 +77,20 @@ const Sidebar = () => {
 
     const sub = supabase
       .channel('public:admin_sidebar_notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaves' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leaves' }, () => {
+         setHasNewLeaves(true);
          checkNotifications();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'leaves' }, (payload) => {
+         if (payload.new && payload.new.status === 'Pending') setHasNewLeaves(true);
+         checkNotifications();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_assignees' }, () => {
+         setHasNewTasks(true);
+         checkNotifications();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'task_assignees' }, (payload) => {
+         if (payload.new && (payload.new.status === 'review' || payload.new.status === 'in-review')) setHasNewTasks(true);
          checkNotifications();
       })
       .subscribe();
@@ -100,6 +111,7 @@ const Sidebar = () => {
       setHasNewTasks(false);
     }
   }, [location.pathname, latestLeavesCount, latestTasksCount]);
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="nav-icon" /> },
     { name: 'Employees', path: '/employees', icon: <Users className="nav-icon" /> },
@@ -112,60 +124,70 @@ const Sidebar = () => {
     { name: 'Points Config', path: '/points', icon: <Coins className="nav-icon" /> },
   ];
 
+  const handleNavClick = (itemName) => {
+    if (itemName === 'Leave Requests') {
+      localStorage.setItem('adminLastSeenLeaves', latestLeavesCount.toString());
+      setHasNewLeaves(false);
+    }
+    if (itemName === 'Tasks') {
+      localStorage.setItem('adminLastSeenTasks', latestTasksCount.toString());
+      setHasNewTasks(false);
+    }
+    onClose?.(); // close sidebar on mobile after nav
+  };
+
   return (
-    <div className="sidebar">
-      <div className="sidebar-logo">
-        <img 
-          src="/logo.png" 
-          alt="RYM Grenergy" 
-          style={{ maxHeight: '45px', objectFit: 'contain' }}
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'flex';
-          }}
-        />
-        <div style={{ display: 'none', alignItems: 'center', gap: '0.5rem' }}>
-          <Zap size={28} color="var(--primary)" />
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>RYM</span>
-            <span style={{ fontWeight: 600, fontSize: '0.65rem', color: '#ffffff', letterSpacing: '0.14em' }}>GRENERGY</span>
+    <>
+      {/* Mobile overlay */}
+      <div className={`sidebar-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
+
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
+          <img 
+            src="/logo.png" 
+            alt="RYM Grenergy" 
+            style={{ maxHeight: '45px', objectFit: 'contain' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+          <div style={{ display: 'none', alignItems: 'center', gap: '0.5rem' }}>
+            <Zap size={26} color="var(--primary)" />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>RYM</span>
+              <span style={{ fontWeight: 600, fontSize: '0.6rem', color: '#ffffff', letterSpacing: '0.14em' }}>GRENERGY</span>
+            </div>
           </div>
+          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="sidebar-nav">
+          {navItems.map((item) => (
+            <NavLink 
+              key={item.name} 
+              to={item.path} 
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={() => handleNavClick(item.name)}
+            >
+              {item.icon}
+              {item.name}
+              {item.name === 'Leave Requests' && hasNewLeaves && location.pathname !== '/leaves' && <div className="nav-dot"></div>}
+              {item.name === 'Tasks' && hasNewTasks && location.pathname !== '/tasks' && <div className="nav-dot"></div>}
+            </NavLink>
+          ))}
+        </div>
+        <div style={{ marginTop: 'auto' }}>
+          <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+            <Settings className="nav-icon" />
+            Settings
+          </NavLink>
         </div>
       </div>
-
-      <div className="sidebar-nav">
-        {navItems.map((item) => (
-          <NavLink 
-            key={item.name} 
-            to={item.path} 
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={() => {
-              if (item.name === 'Leave Requests') {
-                localStorage.setItem('adminLastSeenLeaves', latestLeavesCount.toString());
-                setHasNewLeaves(false);
-              }
-              if (item.name === 'Tasks') {
-                localStorage.setItem('adminLastSeenTasks', latestTasksCount.toString());
-                setHasNewTasks(false);
-              }
-            }}
-          >
-            {item.icon}
-            {item.name}
-            {item.name === 'Leave Requests' && hasNewLeaves && location.pathname !== '/leaves' && <div className="nav-dot"></div>}
-            {item.name === 'Tasks' && hasNewTasks && location.pathname !== '/tasks' && <div className="nav-dot"></div>}
-          </NavLink>
-        ))}
-      </div>
-      <div style={{ marginTop: 'auto' }}>
-        <NavLink to="/settings" className="nav-link">
-          <Settings className="nav-icon" />
-          Settings
-        </NavLink>
-      </div>
-    </div>
+    </>
   );
 };
 
 export default Sidebar;
-

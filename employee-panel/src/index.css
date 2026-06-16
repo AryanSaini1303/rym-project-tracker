@@ -41,6 +41,7 @@ body {
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
+  font-size: 15px;
 }
 
 a {
@@ -67,6 +68,7 @@ button {
 .app-container {
   display: flex;
   height: 100vh;
+  overflow: hidden;
 }
 
 .main-content {
@@ -74,11 +76,12 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .page-content {
   flex: 1;
-  padding: 2rem;
+  padding: 1.75rem 2rem;
   overflow-y: auto;
 }
 
@@ -288,4 +291,63 @@ button {
   100% { transform: rotate(360deg); }
 }
 
+/* ─── Mobile Responsive Layout ─── */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
 
+  .page-content {
+    padding: 1rem 0.875rem;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .card {
+    padding: 0.9rem;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-window {
+    max-width: calc(100vw - 2rem);
+    padding: 1.25rem 1rem;
+  }
+
+  .data-table th, .data-table td {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+
+  .page-content {
+    padding: 0.875rem 0.75rem;
+  }
+
+  .btn-primary,
+  .btn-cancel {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .modal-window {
+    max-width: calc(100vw - 1.5rem);
+    padding: 1rem 0.875rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

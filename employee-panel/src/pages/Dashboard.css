@@ -167,3 +167,60 @@
 .text-center {
   text-align: center;
 }
+
+/* ─── Mobile Responsive ─── */
+@media (max-width: 768px) {
+  .employee-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .dashboard-grid-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-icon-wrapper {
+    width: 42px;
+    height: 42px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .attendance-widget,
+  .progress-panel {
+    padding: 1.25rem;
+  }
+
+  .widget-header {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
+
+  .stat-card {
+    gap: 0.65rem;
+  }
+
+  .stat-icon-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .attendance-widget,
+  .progress-panel {
+    padding: 1rem;
+  }
+}

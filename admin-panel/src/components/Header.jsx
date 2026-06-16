@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut } from 'lucide-react';
+import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import './Header.css';
 
-const Header = () => {
+const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   
@@ -105,12 +105,25 @@ const Header = () => {
       .select('*')
       .is('user_id', null)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(50);
       
     if (!error && data) {
       setNotifications(data);
     }
   };
+
+  useEffect(() => {
+    const sub = supabase
+      .channel('public:admin_header_notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+         fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, []);
 
   const handleNotificationClick = async (notif) => {
     setShowNotifications(false);
@@ -154,6 +167,12 @@ const Header = () => {
 
   return (
     <div className="header">
+      {/* Hamburger - only visible on mobile */}
+      <button className="header-hamburger" onClick={onMenuToggle} aria-label="Toggle menu" style={{ position: 'relative' }}>
+        <Menu size={22} />
+        {hasSidebarDot && <span className="notification-dot" style={{ top: 2, right: 2 }}></span>}
+      </button>
+
       <div className="header-search">
         <Search size={18} color="var(--text-secondary)" />
         <input 

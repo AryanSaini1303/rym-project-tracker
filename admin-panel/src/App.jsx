@@ -25,6 +25,8 @@ const ALLOWED_ADMIN_EMAILS = import.meta.env.VITE_ALLOWED_ADMIN_EMAILS
 function AppContent() {
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hasSidebarDot, setHasSidebarDot] = useState(false);
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
   const isSharedProject = location.pathname.startsWith('/share/projects/');
@@ -105,9 +107,9 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onDotChange={setHasSidebarDot} />
       <div className="main-content">
-        <Header />
+        <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} hasSidebarDot={hasSidebarDot} />
         <div className="page-content">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
