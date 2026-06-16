@@ -130,10 +130,7 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
   };
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      toast('App can only be installed in Production or when PWA criteria are met.', { icon: 'ℹ️', style: { background: 'var(--card-bg)', color: 'var(--text-primary)' } });
-      return;
-    }
+    if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -185,10 +182,12 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
           ))}
         </div>
         <div style={{ marginTop: 'auto' }}>
-          <button className="nav-link" onClick={handleInstallClick} style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>
-            <Download className="nav-icon" />
-            Install App
-          </button>
+          {isInstallable && (
+            <button className="nav-link" onClick={handleInstallClick} style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>
+              <Download className="nav-icon" />
+              Install App
+            </button>
+          )}
           <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}>
             <Settings className="nav-icon" />
             Settings
