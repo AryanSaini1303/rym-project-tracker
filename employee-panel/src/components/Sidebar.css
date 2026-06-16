@@ -31,6 +31,7 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 200;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .sidebar-logo {
@@ -114,7 +115,8 @@
     position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
+    height: 100dvh; /* Better for mobile browsers with toolbars */
+    height: -webkit-fill-available;
     width: 270px;
     transform: translateX(-100%);
     box-shadow: 4px 0 30px rgba(0, 0, 0, 0.6);
