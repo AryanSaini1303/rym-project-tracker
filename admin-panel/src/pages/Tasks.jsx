@@ -10,6 +10,7 @@ const Tasks = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showMissedModal, setShowMissedModal] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
     todo: true,
@@ -94,7 +95,8 @@ const Tasks = () => {
           task_assignees: t.task_assignees || [],
           due_date: t.due_date,
           project_id: t.project_id,
-          projectName: t.projects?.title
+          projectName: t.projects?.title,
+          completed_at: t.completed_at
         };
       });
       setTasks(formatted);
@@ -222,14 +224,19 @@ const Tasks = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center" style={{ marginBottom: '2rem' }}>
+      <div className="flex justify-between items-center" style={{ marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Tasks Board</h1>
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Manage and track project progress.</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
-          <Plus size={18} /> Create Task
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
+          <button className="btn-secondary flex items-center gap-2" onClick={() => setShowMissedModal(true)} style={{ border: '1px solid var(--danger)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)' }}>
+            <AlertCircle size={18} /> Missed Deadlines
+          </button>
+          <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
+            <Plus size={18} /> Create Task
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search */}
@@ -484,6 +491,69 @@ const Tasks = () => {
                 <button type="submit" className="btn-primary">Create Task</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Missed Deadlines Record Modal */}
+      {showMissedModal && (
+        <div className="modal-overlay" onClick={() => setShowMissedModal(false)}>
+          <div className="modal-window glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
+                <AlertCircle size={22} /> Missed Deadlines Record
+              </h3>
+              <button onClick={() => setShowMissedModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+            </div>
+            
+            <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>
+              <table className="custom-table" style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Task</th>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Employee(s)</th>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Due Date</th>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const missedTasks = tasks.filter(t => {
+                      if (!t.due_date) return false;
+                      const dueDate = new Date(t.due_date);
+                      dueDate.setHours(23, 59, 59, 999);
+                      if (t.status === 'done' || t.status === 'completed') {
+                        if (t.completed_at && new Date(t.completed_at) > dueDate) return true;
+                        return false;
+                      } else {
+                        return new Date() > dueDate;
+                      }
+                    });
+                    
+                    if (missedTasks.length === 0) {
+                      return <tr><td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No missed deadlines recorded! 🎉</td></tr>;
+                    }
+                    
+                    return missedTasks.map(task => (
+                      <tr key={task.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>{task.title}</td>
+                        <td style={{ padding: '12px' }}>
+                          {task.task_assignees && task.task_assignees.length > 0 
+                            ? task.task_assignees.map(ta => ta.employees.name).join(', ') 
+                            : <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Unassigned</span>}
+                        </td>
+                        <td style={{ padding: '12px' }}>{new Date(task.due_date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px' }}>
+                          {task.status === 'done' || task.status === 'completed' 
+                            ? <span style={{ color: 'var(--warning)', fontSize: '0.85rem', padding: '2px 8px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '4px' }}>Completed Late</span>
+                            : <span style={{ color: 'var(--danger)', fontSize: '0.85rem', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px' }}>Overdue Now</span>}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

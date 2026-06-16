@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
+import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Tasks.css';
 
@@ -9,6 +9,7 @@ const Tasks = () => {
   const [employee, setEmployee] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showMissedModal, setShowMissedModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     todo: true,
     inprogress: true,
@@ -85,7 +86,8 @@ const Tasks = () => {
         status: t.task_assignees ? t.task_assignees.find(ta => ta.employee_id === empData.id)?.status || 'todo' : t.status,
         due_date: t.due_date,
         points_awarded: t.points_awarded,
-        projectName: t.projects?.title
+        projectName: t.projects?.title,
+        completed_at: t.completed_at
       }));
       setTasks(formatted);
     }
@@ -172,8 +174,15 @@ const Tasks = () => {
 
   return (
     <div>
-      <h1 className="page-title">My Tasks Board</h1>
-      <p className="page-subtitle">Track and update the status of your assigned field assignments.</p>
+      <div className="flex justify-between items-center" style={{ marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 className="page-title" style={{ margin: 0 }}>My Tasks Board</h1>
+          <p className="page-subtitle" style={{ margin: 0, marginTop: '4px' }}>Track and update the status of your assigned field assignments.</p>
+        </div>
+        <button className="btn-secondary flex items-center gap-2" onClick={() => setShowMissedModal(true)} style={{ border: '1px solid var(--danger)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem 1rem', marginLeft: 'auto' }}>
+          <AlertCircle size={18} /> Missed Deadlines
+        </button>
+      </div>
 
       {/* Filter and Search */}
       <div className="card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
@@ -281,6 +290,63 @@ const Tasks = () => {
           );
         })}
       </div>
+
+      {/* Missed Deadlines Record Modal */}
+      {showMissedModal && (
+        <div className="modal-overlay" onClick={() => setShowMissedModal(false)}>
+          <div className="modal-window glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
+                <AlertCircle size={22} /> Missed Deadlines Record
+              </h3>
+              <button onClick={() => setShowMissedModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+            </div>
+            
+            <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>
+              <table className="custom-table" style={{ width: '100%', minWidth: '450px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Task</th>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Due Date</th>
+                    <th style={{ padding: '12px', color: 'var(--text-secondary)' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const missedTasks = tasks.filter(t => {
+                      if (!t.due_date) return false;
+                      const dueDate = new Date(t.due_date);
+                      dueDate.setHours(23, 59, 59, 999);
+                      if (t.status === 'done' || t.status === 'completed') {
+                        if (t.completed_at && new Date(t.completed_at) > dueDate) return true;
+                        return false;
+                      } else {
+                        return new Date() > dueDate;
+                      }
+                    });
+                    
+                    if (missedTasks.length === 0) {
+                      return <tr><td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No missed deadlines recorded! 🎉</td></tr>;
+                    }
+                    
+                    return missedTasks.map(task => (
+                      <tr key={task.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '12px', fontWeight: 500 }}>{task.title}</td>
+                        <td style={{ padding: '12px' }}>{new Date(task.due_date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px' }}>
+                          {task.status === 'done' || task.status === 'completed' 
+                            ? <span style={{ color: 'var(--warning)', fontSize: '0.85rem', padding: '2px 8px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '4px' }}>Completed Late</span>
+                            : <span style={{ color: 'var(--danger)', fontSize: '0.85rem', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px' }}>Overdue Now</span>}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
