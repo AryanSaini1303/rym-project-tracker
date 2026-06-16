@@ -386,7 +386,20 @@ const Projects = () => {
     const { error } = await supabaseAdmin.from('tasks').update({ status: newStatus }).eq('id', taskId);
     if (!error) {
       // Automatically sync the new status to all individual assignees
-      await supabaseAdmin.from('task_assignees').update({ status: newStatus }).eq('task_id', taskId);
+      const { data: assigneesData } = await supabaseAdmin.from('task_assignees').update({ status: newStatus }).eq('task_id', taskId).select('employee_id');
+
+      // Notify assigned employees
+      const taskName = projects.flatMap(p => p.tasks).find(t => t.id === taskId)?.title || 'A task';
+      if (assigneesData && assigneesData.length > 0) {
+        const notifications = assigneesData.map(a => ({
+          user_id: a.employee_id,
+          title: 'Task Status Updated',
+          message: `Admin changed status of "${taskName}" to ${newStatus}`,
+          type: 'task',
+          link: '/tasks'
+        }));
+        await supabaseAdmin.from('notifications').insert(notifications);
+      }
 
       // Update local state for immediate feedback
       const updateProjectStats = (p) => {

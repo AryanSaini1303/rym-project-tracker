@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import https from 'https'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // Custom Vite plugin to act as a secure backend proxy for Auth metadata
 const supabaseProxyPlugin = () => ({
@@ -150,5 +151,32 @@ const supabaseProxyPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), supabaseProxyPlugin()],
+  plugins: [
+    react(),
+    supabaseProxyPlugin(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+      manifest: {
+        name: 'RYM Admin Panel',
+        short_name: 'RYM Admin',
+        description: 'Admin dashboard for RYM Project Tracker',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    })
+  ],
 })

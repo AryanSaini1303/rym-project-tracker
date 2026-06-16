@@ -180,12 +180,26 @@ const Tasks = () => {
       .update({ status: newStatus })
       .eq('id', id);
 
-    const { error: assigneesError } = await supabase
+    const { error: assigneesError, data: assigneesData } = await supabase
       .from('task_assignees')
       .update({ status: newStatus })
-      .eq('task_id', id);
+      .eq('task_id', id)
+      .select('employee_id');
 
     if (!taskError && !assigneesError) {
+      // Notify assigned employees
+      const taskName = tasks.find(t => t.id === id)?.title || 'A task';
+      if (assigneesData && assigneesData.length > 0) {
+        const notifications = assigneesData.map(a => ({
+          user_id: a.employee_id,
+          title: 'Task Status Updated',
+          message: `Admin changed status of "${taskName}" to ${newStatus}`,
+          type: 'task',
+          link: '/tasks'
+        }));
+        await supabase.from('notifications').insert(notifications);
+      }
+
       fetchTasks();
       toast.success('Task status overridden globally');
     } else {

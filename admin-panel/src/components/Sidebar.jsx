@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban, X } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import './Sidebar.css';
@@ -12,6 +12,29 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
 
   const [latestLeavesCount, setLatestLeavesCount] = useState(0);
   const [latestTasksCount, setLatestTasksCount] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     if (onDotChange) {
@@ -145,6 +168,19 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
     onClose?.(); // close sidebar on mobile after nav
   };
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      toast('App can only be installed in Production or when PWA criteria are met.', { icon: 'ℹ️', style: { background: 'var(--card-bg)', color: 'var(--text-primary)' } });
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -189,6 +225,10 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
           ))}
         </div>
         <div style={{ marginTop: 'auto' }}>
+          <button className="nav-link" onClick={handleInstallClick} style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>
+            <Download className="nav-icon" />
+            Install App
+          </button>
           <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={onClose}>
             <Settings className="nav-icon" />
             Settings
