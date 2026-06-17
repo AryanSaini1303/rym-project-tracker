@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import VideoCall from './pages/VideoCall';
 import RegistrationModal from './components/RegistrationModal';
 import { supabase } from './lib/supabaseClient';
+import PullToRefresh from 'react-simple-pull-to-refresh';
 
 function AppContent() {
   const [session, setSession] = useState(null);
@@ -27,6 +28,10 @@ function AppContent() {
   
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
+
+  const handleRefresh = async () => {
+    window.location.reload();
+  };
 
   const checkProfileExists = async (user) => {
     setIsCheckingProfile(true);
@@ -200,17 +205,19 @@ function AppContent() {
       <div className="main-content">
         <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} hasSidebarDot={hasSidebarDot} />
         <div className="page-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/leaves" element={<Leaves />} />
-            <Route path="/meetings" element={<Meetings />} />
-            <Route path="/performance" element={<Performance />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/video-call/:roomId" element={<VideoCall />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          <PullToRefresh onRefresh={handleRefresh}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/leaves" element={<Leaves />} />
+              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/performance" element={<Performance />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/video-call/:roomId" element={<VideoCall />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </PullToRefresh>
         </div>
       </div>
     </div>
