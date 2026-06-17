@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         let fetchUrl = link;
         // If it's a Google Doc, try to grab the pure text export directly
         if (link.includes('docs.google.com/document/d/')) {
-          const docIdMatch = link.match(/\\/d\\/([a-zA-Z0-9-_]+)/);
+          const docIdMatch = link.match(/\/d\/([a-zA-Z0-9-_]+)/);
           if (docIdMatch) {
             fetchUrl = `https://docs.google.com/document/d/${docIdMatch[1]}/export?format=txt`;
           }
@@ -31,10 +31,10 @@ export default async function handler(req, res) {
         
         // Strip scripts, styles, and HTML tags to get raw text
         rawText = htmlOrText
-          .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')
-          .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
           .replace(/<[^>]*>?/gm, ' ')
-          .replace(/\\s\\s+/g, ' ');
+          .replace(/\s\s+/g, ' ');
       } catch (err) {
         return res.status(400).json({ error: 'Failed to extract text from link. Please ensure it is public.' });
       }
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: "You are an expert technical project manager. Read the following raw extracted text from a project brief/document. Create a highly accurate JSON object with exactly two keys: 'title' (a concise 3-6 word project title) and 'description' (a highly detailed summary between 150-200 words capturing the full scope, requirements, and deliverables). The output MUST be valid JSON."
+          content: "You are an expert technical project manager. Read the following raw extracted text from a project brief/document. Create a highly accurate JSON object with exactly three keys: 'title' (a concise 3-6 word project title), 'description' (a highly detailed summary between 150-200 words capturing the full scope, requirements, and deliverables), and 'tasks' (an array of objects, where each object represents a main task/milestone/scope item extracted from headings or main sections in the text, containing: 'title' [a short, clear, action-oriented task title, 3-7 words] and 'description' [a brief task description]). The output MUST be valid JSON."
         },
         {
           role: "user",

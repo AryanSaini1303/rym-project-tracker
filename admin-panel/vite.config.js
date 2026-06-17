@@ -104,7 +104,7 @@ const supabaseProxyPlugin = () => ({
               messages: [
                 {
                   role: "system",
-                  content: "You are an expert technical project manager. Read the following raw extracted text from a project brief/document. Create a highly accurate JSON object with exactly two keys: 'title' (a concise 3-6 word project title) and 'description' (a highly detailed summary between 150-200 words capturing the full scope, requirements, and deliverables). The output MUST be valid JSON."
+                  content: "You are an expert technical project manager. Read the following raw extracted text from a project brief/document. Create a highly accurate JSON object with exactly three keys: 'title' (a concise 3-6 word project title), 'description' (a highly detailed summary between 150-200 words capturing the full scope, requirements, and deliverables), and 'tasks' (an array of objects, where each object represents a main task/milestone/scope item extracted from headings or main sections in the text, containing: 'title' [a short, clear, action-oriented task title, 3-7 words] and 'description' [a brief task description]). The output MUST be valid JSON."
                 },
                 {
                   role: "user",

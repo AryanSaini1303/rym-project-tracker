@@ -208,7 +208,10 @@
 /* Modal styles */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
@@ -370,8 +373,31 @@
   bottom: -20px;
   left: 27px;
   width: 2px;
-  background: rgba(0, 223, 162, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  /* Default grey for Todo */
   z-index: 0;
+  transition: background 0.3s ease;
+}
+
+.task-row-full.done:not(:last-child)::after,
+.task-row-full.completed:not(:last-child)::after {
+  background: var(--success);
+  /* Green */
+}
+
+.task-row-full.inprogress:not(:last-child)::after {
+  background: #3182ce;
+  /* Blue */
+}
+
+.task-row-full.review:not(:last-child)::after {
+  background: var(--warning);
+  /* Orange/Yellow */
+}
+
+.task-row-full.todo:not(:last-child)::after {
+  background: rgba(255, 255, 255, 0.15);
+  /* Grey */
 }
 
 .task-row-full:hover {
@@ -448,12 +474,12 @@
   left: 0;
   margin-top: 0.5rem;
   min-width: 145px;
-  z-index: 50;
+  z-index: 9999 !important;
   border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
-  background: var(--surface-color);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #0b0f19 !important;
 }
 
 .status-option {
@@ -471,10 +497,21 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.status-option.todo { color: var(--text-secondary); }
-.status-option.in-progress { color: #3182ce; }
-.status-option.in-review { color: var(--warning); }
-.status-option.done { color: var(--success); }
+.status-option.todo {
+  color: var(--text-secondary);
+}
+
+.status-option.in-progress {
+  color: #3182ce;
+}
+
+.status-option.in-review {
+  color: var(--warning);
+}
+
+.status-option.done {
+  color: var(--success);
+}
 
 .task-title {
   font-size: 0.88rem;
@@ -586,15 +623,15 @@
   right: 0;
   margin-top: 0.5rem;
   width: 190px;
-  z-index: 50;
+  z-index: 9999 !important;
   border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   max-height: 240px;
   display: flex;
   flex-direction: column;
-  background: var(--surface-color);
+  background: #0b0f19 !important;
 }
 
 .assignee-options {
@@ -609,7 +646,7 @@
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.83rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.2s;
 }
 
@@ -622,15 +659,15 @@
   padding: 2.5rem 1.5rem;
   text-align: center;
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.02);
-  border: 1px dashed rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
 }
 
 .line-of-progress-container {
   padding: 0.9rem 1.25rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
 }
 
@@ -706,6 +743,11 @@
     align-items: flex-start;
   }
 
+  .task-row-full:not(:last-child)::after {
+    left: calc(23px - 0.20rem);
+    top: 26px;
+  }
+
   .task-row-content {
     flex-direction: column;
     align-items: flex-start;
@@ -720,7 +762,8 @@
 
   .task-title {
     font-size: 0.82rem;
-    white-space: normal; /* allow wrap so it stays visible */
+    white-space: normal;
+    /* allow wrap so it stays visible */
     overflow: visible;
     text-overflow: unset;
     max-width: 100%;
@@ -735,7 +778,7 @@
   }
 
   /* Compact assignee badges on mobile */
-  .task-row-actions > div > div > div {
+  .task-row-actions>div>div>div {
     min-width: unset !important;
     max-width: 120px;
   }

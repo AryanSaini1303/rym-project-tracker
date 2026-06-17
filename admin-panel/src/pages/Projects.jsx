@@ -10,6 +10,33 @@ import './Projects.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const getTaskCalculatedStatus = (task) => {
+  if (!task.task_assignees || task.task_assignees.length === 0) {
+    return task.status ? task.status.replace('-', '') : 'todo';
+  }
+  const allDone = task.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed');
+  const allTodo = task.task_assignees.every(ta => !ta.status || ta.status === 'todo');
+  if (allDone) return 'done';
+  if (allTodo) return 'todo';
+  if (task.task_assignees.some(ta => ta.status === 'review' || ta.status === 'in-review')) return 'review';
+  return 'inprogress';
+};
+
+const getStatusWeight = (status) => {
+  switch (status) {
+    case 'done':
+    case 'completed':
+      return 1;
+    case 'inprogress':
+      return 2;
+    case 'review':
+      return 3;
+    case 'todo':
+    default:
+      return 4;
+  }
+};
+
 const Projects = () => {
   const location = useLocation();
   const [projects, setProjects] = useState([]);
@@ -23,6 +50,7 @@ const Projects = () => {
   const [isParsing, setIsParsing] = useState(false);
   const [editProjectId, setEditProjectId] = useState(null);
   const [allEmployees, setAllEmployees] = useState([]);
+  const [generatedTasks, setGeneratedTasks] = useState([]);
   
   // Quick Task Modal State
   const [quickTaskModal, setQuickTaskModal] = useState({ show: false, projectId: null, projectName: '' });
@@ -95,7 +123,18 @@ const Projects = () => {
         description: parsedAiContent.description || extractedText.substring(0, 500)
       }));
 
-      toast.success("AI generated title and summary successfully!", { id: parsingToast });
+      if (parsedAiContent.tasks && Array.isArray(parsedAiContent.tasks)) {
+        setGeneratedTasks(parsedAiContent.tasks.map(t => ({
+          id: Math.random().toString(36).substr(2, 9),
+          title: t.title || '',
+          description: t.description || '',
+          assigneeId: ''
+        })));
+      } else {
+        setGeneratedTasks([]);
+      }
+
+      toast.success("AI generated title, summary and tasks successfully!", { id: parsingToast });
     } catch (error) {
       console.error("Error analyzing file:", error);
       toast.error(error.message || "Failed to analyze document.", { id: parsingToast });
@@ -138,7 +177,18 @@ const Projects = () => {
         description: parsedAiContent.description || 'Processed from link.'
       }));
 
-      toast.success("AI generated title and summary from link successfully!", { id: parsingToast });
+      if (parsedAiContent.tasks && Array.isArray(parsedAiContent.tasks)) {
+        setGeneratedTasks(parsedAiContent.tasks.map(t => ({
+          id: Math.random().toString(36).substr(2, 9),
+          title: t.title || '',
+          description: t.description || '',
+          assigneeId: ''
+        })));
+      } else {
+        setGeneratedTasks([]);
+      }
+
+      toast.success("AI generated title, summary and tasks from link successfully!", { id: parsingToast });
       setProjectLink('');
     } catch (error) {
       console.error("Error analyzing link:", error);
@@ -299,12 +349,61 @@ const Projects = () => {
         }])
         .select();
 
-      if (!error && data) {
-        setProjects([{ ...data[0], totalTasks: 0, completedTasks: 0, progress: 0, assignedEmployees: [] }, ...projects]);
+      if (!error && data && data[0]) {
+        const projectId = data[0].id;
+        
+        // Filter out empty task titles
+        const tasksToInsert = generatedTasks
+          .filter(t => t.title.trim() !== '')
+          .map(t => ({
+            project_id: projectId,
+            title: t.title.trim(),
+            description: t.description.trim() || `Task for project: ${data[0].title}`,
+            status: 'todo'
+          }));
+
+        if (tasksToInsert.length > 0) {
+          const { data: insertedTasks, error: tasksError } = await supabaseAdmin
+            .from('tasks')
+            .insert(tasksToInsert)
+            .select();
+
+          if (tasksError) {
+            console.error('Failed to create tasks:', tasksError);
+            toast.error("Project created, but tasks failed to save: " + tasksError.message);
+          } else if (insertedTasks) {
+            // Find active tasks (those that were not empty) and correlate them to inserted tasks
+            const activeGeneratedTasks = generatedTasks.filter(t => t.title.trim() !== '');
+            const assigneesToInsert = [];
+
+            insertedTasks.forEach((insertedTask, idx) => {
+              const matchingGenTask = activeGeneratedTasks[idx];
+              if (matchingGenTask && matchingGenTask.assigneeId) {
+                assigneesToInsert.push({
+                  task_id: insertedTask.id,
+                  employee_id: matchingGenTask.assigneeId,
+                  status: 'todo'
+                });
+              }
+            });
+
+            if (assigneesToInsert.length > 0) {
+              const { error: assigneesError } = await supabaseAdmin
+                .from('task_assignees')
+                .insert(assigneesToInsert);
+              if (assigneesError) {
+                console.error('Failed to assign employees to tasks:', assigneesError);
+                toast.error("Tasks created, but some assignments failed to save.");
+              }
+            }
+          }
+        }
+
+        await fetchProjectsData();
         toast.success("Project created successfully!");
         closeModal();
       } else {
-        toast.error("Failed to create project.");
+        toast.error("Failed to create project: " + (error?.message || "Unknown error"));
       }
     }
     setIsSubmitting(false);
@@ -341,6 +440,7 @@ const Projects = () => {
     setShowModal(false);
     setEditProjectId(null);
     setNewProject({ title: '', description: '' });
+    setGeneratedTasks([]);
   };
 
   const openQuickTask = (project) => {
@@ -685,6 +785,118 @@ const Projects = () => {
                   rows="3"
                 />
               </div>
+
+              {/* AI Generated Tasks section */}
+              {!editProjectId && (
+                <div className="form-group generated-tasks-section" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <label style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
+                      Project Tasks ({generatedTasks.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedTasks([...generatedTasks, { id: Math.random().toString(36).substr(2, 9), title: '', description: '', assigneeId: '' }])}
+                      style={{
+                        background: 'rgba(0, 223, 162, 0.1)',
+                        border: '1px solid rgba(0, 223, 162, 0.2)',
+                        color: 'var(--primary)',
+                        borderRadius: '6px',
+                        padding: '0.25rem 0.5rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      <Plus size={12} /> Add Task
+                    </button>
+                  </div>
+
+                  {generatedTasks.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {generatedTasks.map((task, index) => (
+                        <div key={task.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '0.75rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>{index + 1}</span>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <input
+                              type="text"
+                              required
+                              value={task.title}
+                              onChange={(e) => {
+                                const newTasks = [...generatedTasks];
+                                newTasks[index].title = e.target.value;
+                                setGeneratedTasks(newTasks);
+                              }}
+                              placeholder="Task Title *"
+                              className="form-input"
+                              style={{ margin: 0, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                            />
+                            <input
+                              type="text"
+                              value={task.description}
+                              onChange={(e) => {
+                                const newTasks = [...generatedTasks];
+                                newTasks[index].description = e.target.value;
+                                setGeneratedTasks(newTasks);
+                              }}
+                              placeholder="Task Description (Optional)"
+                              className="form-input"
+                              style={{ margin: 0, padding: '0.3rem 0.6rem', fontSize: '0.8rem', opacity: 0.8 }}
+                            />
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '150px' }}>
+                            <select
+                              className="form-input"
+                              style={{ margin: 0, padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+                              value={task.assigneeId}
+                              onChange={(e) => {
+                                const newTasks = [...generatedTasks];
+                                newTasks[index].assigneeId = e.target.value;
+                                setGeneratedTasks(newTasks);
+                              }}
+                            >
+                              <option value="">Assign Employee</option>
+                              {allEmployees.map(emp => (
+                                <option key={emp.id} value={emp.id}>{emp.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setGeneratedTasks(generatedTasks.filter(t => t.id !== task.id))}
+                            style={{
+                              background: 'rgba(244, 63, 94, 0.1)',
+                              border: '1px solid rgba(244, 63, 94, 0.2)',
+                              color: 'var(--danger)',
+                              borderRadius: '6px',
+                              padding: '0.4rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.2s',
+                              flexShrink: 0
+                            }}
+                            title="Remove task"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)' }}>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        No tasks generated. Upload a project brief document or enter a link to auto-fill description and tasks, or click "Add Task" to create manually.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
@@ -829,23 +1041,21 @@ const Projects = () => {
 
                 {selectedProject.tasks && selectedProject.tasks.length > 0 ? (
                   <div className="task-list-full">
-                    {selectedProject.tasks.map((task) => {
-                      
-                      // Helper to calculate the overall task status based on individuals
-                      const getCalculatedStatus = () => {
-                        if (!task.task_assignees || task.task_assignees.length === 0) return task.status ? task.status.replace('-', '') : 'todo';
-                        const allDone = task.task_assignees.every(ta => ta.status === 'done' || ta.status === 'completed');
-                        const allTodo = task.task_assignees.every(ta => !ta.status || ta.status === 'todo');
-                        if (allDone) return 'done';
-                        if (allTodo) return 'todo';
-                        if (task.task_assignees.some(ta => ta.status === 'review' || ta.status === 'in-review')) return 'review';
-                        return 'inprogress';
-                      };
-                      
-                      const calculatedStatus = getCalculatedStatus();
+                    {[...selectedProject.tasks]
+                      .sort((a, b) => {
+                        const statusA = getTaskCalculatedStatus(a);
+                        const statusB = getTaskCalculatedStatus(b);
+                        return getStatusWeight(statusA) - getStatusWeight(statusB);
+                      })
+                      .map((task) => {
+                        const calculatedStatus = getTaskCalculatedStatus(task);
 
-                      return (
-                      <div key={task.id} className="task-row-full">
+                        return (
+                        <div 
+                          key={task.id} 
+                          className={`task-row-full ${calculatedStatus}`}
+                          style={{ zIndex: (openAssigneeMenu === task.id || openStatusMenu === task.id) ? 100 : 1 }}
+                        >
                         <div className="task-row-status">
                           <div className="custom-status-dropdown-container">
                             <button 
@@ -859,7 +1069,7 @@ const Projects = () => {
                                <Circle size={14} />}
                             </button>
                           {openStatusMenu === task.id && (
-                            <div className="status-dropdown-menu glass">
+                            <div className="status-dropdown-menu">
                               <div className="status-option todo" onClick={() => updateTaskStatus(task.id, 'todo')}><Circle size={14}/> To Do</div>
                               <div className="status-option inprogress" onClick={() => updateTaskStatus(task.id, 'inprogress')}><div className="half-circle"></div> In Progress</div>
                               <div className="status-option review" onClick={() => updateTaskStatus(task.id, 'review')}><AlertCircle size={14}/> In Review</div>
@@ -931,7 +1141,7 @@ const Projects = () => {
                                 )}
                                 
                                 {openAssigneeMenu === task.id && (
-                                  <div className="assignee-dropdown-menu glass" style={{ width: '250px' }}>
+                                  <div className="assignee-dropdown-menu" style={{ width: '250px' }}>
                                     <div className="assignee-options">
                                       {allEmployees.map(emp => {
                                         const assignment = (task.task_assignees || []).find(ta => ta.employees.id === emp.id);
