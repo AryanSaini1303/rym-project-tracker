@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Briefcase, Plus, Search, Calendar, CheckCircle2, Circle, AlertCircle, Loader2, UploadCloud, Edit2, Trash2, X, ChevronDown, Check, UserPlus, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabaseAdmin } from '../lib/supabaseClient';
+import { triggerPushNotification } from '../lib/push';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import mammoth from 'mammoth/mammoth.browser';
@@ -499,6 +500,7 @@ const Projects = () => {
           link: '/tasks'
         }));
         await supabaseAdmin.from('notifications').insert(notifications);
+        await triggerPushNotification(notifications);
       }
 
       // Update local state for immediate feedback

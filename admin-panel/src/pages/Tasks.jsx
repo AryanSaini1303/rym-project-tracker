@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
+import { triggerPushNotification } from '../lib/push';
 import './Tasks.css';
 
 
@@ -12,15 +13,13 @@ const Tasks = () => {
   const [showModal, setShowModal] = useState(false);
   const [showMissedModal, setShowMissedModal] = useState(false);
   const [employees, setEmployees] = useState([]);
-  const [expandedSections, setExpandedSections] = useState({
-    todo: true,
-    inprogress: true,
-    review: false,
-    done: false
-  });
+  const [expandedSections, setExpandedSections] = useState({});
 
   const toggleSection = (key) => {
-    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+    setExpandedSections(prev => ({
+      ...prev,
+      [key]: prev[key] === false ? true : false
+    }));
   };
 
   // Form states
@@ -153,13 +152,15 @@ const Tasks = () => {
         status: taskStatus
       }]);
       
-      await supabase.from('notifications').insert([{
+      const newNotification = [{
         user_id: taskAssignee,
         title: 'New Task Assigned',
         message: `You have been assigned a new task: "${taskTitle}"`,
         type: 'task',
         link: '/tasks'
-      }]);
+      }];
+      await supabase.from('notifications').insert(newNotification);
+      await triggerPushNotification(newNotification);
     }
 
     fetchTasks();
@@ -198,6 +199,7 @@ const Tasks = () => {
           link: '/tasks'
         }));
         await supabase.from('notifications').insert(notifications);
+        await triggerPushNotification(notifications);
       }
 
       fetchTasks();
@@ -229,11 +231,31 @@ const Tasks = () => {
   };
 
 
-  const columns = [
-    { key: 'todo', label: 'To Do', color: 'var(--primary)' },
-    { key: 'inprogress', label: 'In Progress', color: '#3182ce' },
-    { key: 'review', label: 'In Review', color: 'var(--warning)' },
-    { key: 'done', label: 'Done', color: 'var(--secondary)' }
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'done':
+        return 'var(--secondary)';
+      case 'inprogress':
+        return '#3182ce';
+      case 'review':
+        return 'var(--warning)';
+      case 'todo':
+      default:
+        return 'var(--primary)';
+    }
+  };
+
+  const sections = [
+    ...projects.map(p => ({
+      key: p.id,
+      label: p.title,
+      color: 'var(--primary)'
+    })),
+    {
+      key: 'no-project',
+      label: 'General Tasks (No Project)',
+      color: 'var(--text-secondary)'
+    }
   ];
 
   return (
@@ -247,7 +269,11 @@ const Tasks = () => {
           <button className="btn-secondary flex items-center gap-2" onClick={() => setShowMissedModal(true)} style={{ border: '1px solid var(--danger)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)' }}>
             <AlertCircle size={18} /> Missed Deadlines
           </button>
-          <button className="btn-primary flex items-center gap-2" onClick={() => setShowModal(true)}>
+          <button className="btn-primary flex items-center gap-2" onClick={() => {
+            setTaskProject('');
+            setTaskStatus('todo');
+            setShowModal(true);
+          }}>
             <Plus size={18} /> Create Task
           </button>
         </div>
@@ -269,17 +295,26 @@ const Tasks = () => {
       </div>
 
       <div className="task-stack-container">
-        {columns.map((col) => {
-          const colTasks = tasks.filter(t => t.status === col.key && (
-            t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            t.desc.toLowerCase().includes(searchTerm.toLowerCase())
-          ));
+        {sections.map((sec) => {
+          const secTasks = tasks.filter(t => {
+            const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                  t.desc.toLowerCase().includes(searchTerm.toLowerCase());
+            if (sec.key === 'no-project') {
+              return !t.project_id && matchesSearch;
+            }
+            return t.project_id === sec.key && matchesSearch;
+          });
+
+          // Only render projects that have tasks OR show all projects if no search term is active
+          if (secTasks.length === 0 && searchTerm) return null;
+
+          const isExpanded = expandedSections[sec.key] !== false;
 
           return (
-            <div key={col.key} className="card" style={{ marginBottom: '1rem', overflow: 'hidden' }}>
+            <div key={sec.key} className="card" style={{ marginBottom: '1rem', overflow: 'hidden' }}>
               <div 
                 className="stack-header"
-                onClick={() => toggleSection(col.key)}
+                onClick={() => toggleSection(sec.key)}
                 style={{ 
                   cursor: 'pointer', 
                   padding: '1rem 1.25rem', 
@@ -287,19 +322,20 @@ const Tasks = () => {
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   backgroundColor: 'rgba(255,255,255,0.02)',
-                  borderBottom: expandedSections[col.key] ? '1px solid var(--border-color)' : 'none'
+                  borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  {expandedSections[col.key] ? <ChevronDown size={20} color="var(--text-secondary)" /> : <ChevronRight size={20} color="var(--text-secondary)" />}
-                  <h3 style={{ margin: 0, color: col.color, fontSize: '1.1rem' }}>{col.label}</h3>
-                  <span className="task-count" style={{ backgroundColor: 'var(--bg-color)', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem' }}>{colTasks.length}</span>
+                  {isExpanded ? <ChevronDown size={20} color="var(--text-secondary)" /> : <ChevronRight size={20} color="var(--text-secondary)" />}
+                  <h3 style={{ margin: 0, color: sec.color, fontSize: '1.1rem' }}>{sec.label}</h3>
+                  <span className="task-count" style={{ backgroundColor: 'var(--bg-color)', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem' }}>{secTasks.length}</span>
                 </div>
                 
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setTaskStatus(col.key);
+                    setTaskProject(sec.key === 'no-project' ? '' : sec.key);
+                    setTaskStatus('todo');
                     setShowModal(true);
                   }}
                   className="btn-primary"
@@ -309,98 +345,103 @@ const Tasks = () => {
                 </button>
               </div>
               
-              {expandedSections[col.key] && (
+              {isExpanded && (
                 <div style={{ padding: '1.25rem' }}>
-                  {colTasks.length === 0 ? (
+                  {secTasks.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '1rem 0' }}>
-                      No tasks in this section.
+                      No tasks in this project.
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-                      {colTasks.map(task => (
-                        <div key={task.id} className="task-card" style={{ borderLeftColor: col.color }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <h4 style={{ margin: 0, paddingRight: '0.5rem' }}>{task.title}</h4>
-                            <button 
-                              onClick={() => handleDeleteTask(task.id)} 
-                              style={{ color: 'var(--danger)', opacity: 0.7, padding: '0.2rem' }}
-                              title="Delete task"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <p style={{ marginTop: '0.5rem' }}>{task.desc}</p>
-                          
-                          {task.projectName && (
-                            <div style={{ margin: '0.5rem 0', display: 'inline-block', backgroundColor: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
-                              Project: {task.projectName}
+                      {secTasks.map(task => {
+                        const statusColor = getStatusColor(task.status);
+                        
+                        return (
+                          <div key={task.id} className="task-card" style={{ borderLeftColor: statusColor }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <h4 style={{ margin: 0, paddingRight: '0.5rem' }}>{task.title}</h4>
+                              <button 
+                                onClick={() => handleDeleteTask(task.id)} 
+                                style={{ color: 'var(--danger)', opacity: 0.7, padding: '0.2rem' }}
+                                title="Delete task"
+                              >
+                                <X size={14} />
+                              </button>
                             </div>
-                          )}
-
-                          {/* Column switcher */}
-                          <div style={{ marginBottom: '0.75rem', marginTop: '0.5rem' }}>
-                            <select
-                              className="filter-input"
-                              style={{ width: '100%', fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
-                              value={task.status}
-                              onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                            >
-                              <option value="todo">To Do</option>
-                              <option value="inprogress">In Progress</option>
-                              <option value="review">In Review</option>
-                              <option value="done">Done</option>
-                            </select>
-                          </div>
-
-                          <div className="task-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-                            <div className="task-row-actions" style={{ width: '100%' }}>
-                              <div className="assignee-dropdown-container">
-                                {task.task_assignees && task.task_assignees.length > 0 ? (
-                                  <div className="assignees-stack-badge" style={{ cursor: 'default', background: 'transparent', border: 'none', padding: 0 }}>
-                                    <div className="avatars-stack" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-                                      {task.task_assignees.map((ta) => {
-                                        const normalizedStatus = ta.status ? ta.status.replace('-', '') : 'todo';
-                                        const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? 50 : 0;
-                                        const color = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 'var(--success)' : normalizedStatus === 'review' ? 'var(--warning)' : normalizedStatus === 'inprogress' ? '#3182ce' : 'var(--text-secondary)';
-                                        return (
-                                          <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', gap: '8px', flex: 1, minWidth: '140px' }}>
-                                            <div className="assignee-avatar" style={{ width: '18px', height: '18px', fontSize: '0.6rem', border: 'none' }}>
-                                              {ta.employees.name.charAt(0)}
-                                            </div>
-                                            <span style={{ fontSize: '0.75rem', width: '50px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ta.employees.name.split(' ')[0]}</span>
-                                            
-                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                                <div style={{ width: `${percent}%`, height: '100%', background: color, transition: 'all 0.5s ease' }}></div>
-                                              </div>
-                                              <span style={{ fontSize: '0.65rem', color: color, fontWeight: 600, width: '24px', textAlign: 'right' }}>{percent}%</span>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                    Unassigned
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                            <p style={{ marginTop: '0.5rem' }}>{task.desc}</p>
                             
-                            {(() => {
-                              const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0)) && task.status !== 'done';
-                              return (
-                                <div className="flex items-center gap-1" style={{ color: isOverdue ? 'var(--danger)' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: isOverdue ? 600 : 400 }}>
-                                  {isOverdue ? <AlertCircle size={14} /> : <Calendar size={14} />} 
-                                  {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'No due date'}
-                                  {isOverdue && <span style={{ marginLeft: '4px' }}>Overdue!</span>}
+                            {/* Display Task Status Badge inside card */}
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                              <span className={`status-badge ${task.status === 'done' ? 'completed' : task.status === 'inprogress' ? 'inprogress' : task.status === 'review' ? 'review' : 'pending'}`} style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                                {task.status === 'done' ? 'Done' : task.status === 'inprogress' ? 'In Progress' : task.status === 'review' ? 'In Review' : 'To Do'}
+                              </span>
+                            </div>
+
+                            {/* Column switcher */}
+                            <div style={{ marginBottom: '0.75rem', marginTop: '0.5rem' }}>
+                              <select
+                                className="filter-input"
+                                style={{ width: '100%', fontSize: '0.8rem', padding: '0.4rem 0.5rem' }}
+                                value={task.status}
+                                onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                              >
+                                <option value="todo">To Do</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="review">In Review</option>
+                                <option value="done">Done</option>
+                              </select>
+                            </div>
+
+                            <div className="task-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                              <div className="task-row-actions" style={{ width: '100%' }}>
+                                <div className="assignee-dropdown-container">
+                                  {task.task_assignees && task.task_assignees.length > 0 ? (
+                                    <div className="assignees-stack-badge" style={{ cursor: 'default', background: 'transparent', border: 'none', padding: 0 }}>
+                                      <div className="avatars-stack" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {task.task_assignees.map((ta) => {
+                                          const normalizedStatus = ta.status ? ta.status.replace('-', '') : 'todo';
+                                          const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? 50 : 0;
+                                          const color = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 'var(--success)' : normalizedStatus === 'review' ? 'var(--warning)' : normalizedStatus === 'inprogress' ? '#3182ce' : 'var(--text-secondary)';
+                                          return (
+                                            <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', gap: '8px', flex: 1, minWidth: '140px' }}>
+                                              <div className="assignee-avatar" style={{ width: '18px', height: '18px', fontSize: '0.6rem', border: 'none' }}>
+                                                {ta.employees.name.charAt(0)}
+                                              </div>
+                                              <span style={{ fontSize: '0.75rem', width: '50px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ta.employees.name.split(' ')[0]}</span>
+                                              
+                                              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                  <div style={{ width: `${percent}%`, height: '100%', background: color, transition: 'all 0.5s ease' }}></div>
+                                                </div>
+                                                <span style={{ fontSize: '0.65rem', color: color, fontWeight: 600, width: '24px', textAlign: 'right' }}>{percent}%</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                      Unassigned
+                                    </span>
+                                  )}
                                 </div>
-                              );
-                            })()}
+                              </div>
+                              
+                              {(() => {
+                                const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0)) && task.status !== 'done';
+                                return (
+                                  <div className="flex items-center gap-1" style={{ color: isOverdue ? 'var(--danger)' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: isOverdue ? 600 : 400 }}>
+                                    {isOverdue ? <AlertCircle size={14} /> : <Calendar size={14} />} 
+                                    {task.due_date ? new Date(task.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'No due date'}
+                                    {isOverdue && <span style={{ marginLeft: '4px' }}>Overdue!</span>}
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

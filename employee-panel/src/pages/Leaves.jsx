@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { triggerPushNotification } from '../lib/push';
 import './Leaves.css';
 
 const Leaves = () => {
@@ -132,13 +133,15 @@ const Leaves = () => {
         toast.success('Leave request submitted successfully!');
 
         // Create admin notification
-        await supabase.from('notifications').insert([{
+        const newNotification = [{
           user_id: null, // null means it's for all admins
           title: 'New Leave Request',
           message: `${employee?.name || 'An employee'} applied for ${leaveType}.`,
           type: 'leave',
           link: '/leaves'
-        }]);
+        }];
+        await supabase.from('notifications').insert(newNotification);
+        await triggerPushNotification(newNotification);
 
         // Reset
         setLeaveType('Annual Leave');

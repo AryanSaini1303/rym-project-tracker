@@ -24,6 +24,8 @@ const ALLOWED_ADMIN_EMAILS = import.meta.env.VITE_ALLOWED_ADMIN_EMAILS
 
 import PullToRefresh from 'react-simple-pull-to-refresh';
 
+import { triggerPushNotification } from './lib/push';
+
 function AppContent() {
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +132,7 @@ function AppContent() {
 
         if (newNotifications.length > 0) {
           await supabase.from('notifications').insert(newNotifications);
+          await triggerPushNotification(newNotifications);
         }
       }
     };

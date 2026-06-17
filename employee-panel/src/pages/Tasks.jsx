@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { triggerPushNotification } from '../lib/push';
 import './Tasks.css';
 
 const Tasks = () => {
@@ -144,13 +145,15 @@ const Tasks = () => {
         const action = newStatus === 'review' ? 'submitted for review' : 'completed';
         const title = newStatus === 'review' ? 'Task Ready for Review' : 'Task Completed';
         
-        await supabase.from('notifications').insert([{
+        const newNotification = [{
           user_id: null,
           title: title,
           message: `${employee?.name || 'An employee'} ${action}: "${taskName}"`,
           type: 'task',
           link: '/tasks'
-        }]);
+        }];
+        await supabase.from('notifications').insert(newNotification);
+        await triggerPushNotification(newNotification);
       }
     } else {
       toast.error('Error updating task status: ' + error.message);

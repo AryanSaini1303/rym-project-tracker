@@ -28,6 +28,9 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        importScripts: ['/push-sw.js'],
       }
     })
   ],

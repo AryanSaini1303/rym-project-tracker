@@ -3,6 +3,7 @@ import { Search, Calendar, Video, X, ExternalLink, Copy, Trash2 } from 'lucide-r
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../lib/supabaseClient';
+import { triggerPushNotification } from '../lib/push';
 import './Meetings.css';
 
 const Meetings = () => {
@@ -53,6 +54,16 @@ const Meetings = () => {
   useEffect(() => {
     fetchVideoCalls();
     fetchEmployees();
+
+    // Auto-refresh when a new video call is started, joined, or ended
+    const meetingsSub = supabase
+      .channel('public:meetings_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_calls' }, () => {
+        fetchVideoCalls();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(meetingsSub);
   }, []);
 
   const handleStartVideoCall = async (e) => {
@@ -85,6 +96,7 @@ const Meetings = () => {
     }));
     
     await supabaseAdmin.from('notifications').insert(notifications);
+    await triggerPushNotification(notifications);
 
     setIsStartingCall(false);
     fetchVideoCalls(); // Refresh table

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
+import { triggerPushNotification } from '../lib/push';
 import './Leaves.css';
 
 const Leaves = () => {
@@ -92,13 +93,15 @@ const Leaves = () => {
       // Create notification
       const leaveRecord = leaves.find(l => l.id === id);
       if (leaveRecord && leaveRecord.employee_id) {
-        await supabase.from('notifications').insert([{
+      const newNotification = [{
           user_id: leaveRecord.employee_id,
           title: `Leave Request ${newStatus}`,
           message: `Your ${leaveRecord.type} request has been ${newStatus.toLowerCase()}.`,
           type: 'leave',
           link: '/leaves'
-        }]);
+        }];
+        await supabase.from('notifications').insert(newNotification);
+        await triggerPushNotification(newNotification);
       }
     } else {
       alert('Error updating status: ' + error.message);

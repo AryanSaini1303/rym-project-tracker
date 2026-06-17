@@ -136,11 +136,66 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
     }
   };
 
+  const urlB64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const subscribeToPush = async (userId) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!publicVapidKey) return;
+        
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array(publicVapidKey)
+        });
+      }
+
+      if (subscription) {
+        // Check if exists
+        const { data: existing } = await supabase
+          .from('push_subscriptions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('subscription->>endpoint', subscription.endpoint)
+          .limit(1);
+          
+        if (!existing || existing.length === 0) {
+           await supabase.from('push_subscriptions').insert([{
+             user_id: userId,
+             subscription: subscription
+           }]);
+        }
+      }
+    } catch (e) {
+      console.error('Push registration failed:', e);
+    }
+  };
+
   useEffect(() => {
     if (!profile.id) return;
     
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        subscribeToPush(profile.id);
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') subscribeToPush(profile.id);
+        });
+      }
     }
     
     const sub = supabase
