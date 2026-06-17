@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu } from 'lucide-react';
+import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu, BellRing } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,9 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const profileDropdownRef = useRef(null);
   const fileInputRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notificationPermission, setNotificationPermission] = useState(
+    'Notification' in window ? Notification.permission : 'default'
+  );
 
   useEffect(() => {
     async function getSessionUser() {
@@ -160,12 +163,29 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
     }
   };
 
+  const requestManualPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        subscribeToPush(null);
+        toast.success('Notifications enabled successfully!');
+      } else {
+        toast.error('Notification permission ' + permission);
+      }
+    } else {
+      toast.error('Notifications not supported by this browser');
+    }
+  };
+
   useEffect(() => {
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
         subscribeToPush(null);
       } else if (Notification.permission !== 'denied') {
+        // We still request it automatically for desktop, but mobile will ignore it
         Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
           if (permission === 'granted') subscribeToPush(null);
         });
       }
@@ -263,8 +283,18 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
         />
       </div>
       
-      <div className="header-actions">
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         
+        {notificationPermission === 'default' && (
+          <button 
+            onClick={requestManualPermission}
+            className="btn-primary"
+            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+          >
+            <BellRing size={14} /> Enable Notifications
+          </button>
+        )}
+
         <div className="notification-wrapper" ref={dropdownRef}>
           <button className="icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
             <Bell size={22} />
