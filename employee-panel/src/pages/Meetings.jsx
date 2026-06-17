@@ -115,22 +115,42 @@ const Meetings = () => {
                   <td>
                     <div className="flex gap-2">
                       <button 
-                        className="btn-primary flex items-center gap-1"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                        onClick={() => navigate(`/video-call/${call.room_name}`)}
-                        title="Join Meeting"
+                        className="flex items-center gap-1"
+                        style={{ 
+                          padding: '0.4rem 0.8rem', 
+                          fontSize: '0.8rem',
+                          background: call.status === 'active' ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                          color: call.status === 'active' ? '#000' : 'var(--text-secondary)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: call.status === 'active' ? 'pointer' : 'not-allowed',
+                          opacity: call.status === 'active' ? 1 : 0.6
+                        }}
+                        onClick={() => call.status === 'active' && navigate(`/video-call/${call.room_name}`)}
+                        title={call.status === 'active' ? "Join Meeting" : "Meeting Ended"}
+                        disabled={call.status !== 'active'}
                       >
                         <Video size={14} /> Join
                       </button>
                       <button 
                         className="btn-secondary flex items-center gap-1"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
+                        style={{ 
+                          padding: '0.4rem 0.8rem', 
+                          fontSize: '0.8rem', 
+                          border: '1px solid var(--border-color)', 
+                          background: 'rgba(255,255,255,0.05)', 
+                          color: 'var(--text-secondary)',
+                          opacity: call.status === 'active' ? 1 : 0.6,
+                          cursor: call.status === 'active' ? 'pointer' : 'not-allowed'
+                        }}
                         onClick={() => {
+                          if (call.status !== 'active') return;
                           const externalLink = `https://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${call.room_name}`;
                           navigator.clipboard.writeText(externalLink);
                           toast.success('External Jitsi link copied! Share this with your client.');
                         }}
-                        title="Copy External Meeting Link"
+                        title={call.status === 'active' ? "Copy External Meeting Link" : "Meeting Ended"}
+                        disabled={call.status !== 'active'}
                       >
                         <Copy size={14} /> Copy Link
                       </button>

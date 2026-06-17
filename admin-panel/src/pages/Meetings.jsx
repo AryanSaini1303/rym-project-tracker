@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Video, X, ExternalLink, Copy, Trash2 } from 'lucide-react';
+import { Search, Calendar, Video, X, ExternalLink, Copy, Trash2, Users, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../lib/supabaseClient';
@@ -16,6 +16,9 @@ const Meetings = () => {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedEmpIds, setSelectedEmpIds] = useState([]);
   const [isStartingCall, setIsStartingCall] = useState(false);
+  
+  const [expandedCallId, setExpandedCallId] = useState(null);
+  const [participantsData, setParticipantsData] = useState({});
   
   // Scheduling State
   const [callType, setCallType] = useState('instant'); // 'instant' or 'scheduled'
@@ -143,6 +146,27 @@ const Meetings = () => {
     setSelectedEmpIds([]);
   };
 
+  const toggleParticipants = async (callId, roomName) => {
+    if (expandedCallId === callId) {
+      setExpandedCallId(null);
+      return;
+    }
+    
+    setExpandedCallId(callId);
+    
+    if (!participantsData[callId]) {
+      const { data, error } = await supabaseAdmin
+        .from('meeting_participants')
+        .select('*')
+        .eq('room_name', roomName)
+        .order('joined_at', { ascending: true });
+        
+      if (!error && data) {
+        setParticipantsData(prev => ({ ...prev, [callId]: data }));
+      }
+    }
+  };
+
   const filteredCalls = videoCalls.filter(call => {
     const empName = call.employees?.name || 'Unknown';
     return empName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -197,7 +221,8 @@ const Meetings = () => {
               </tr>
             ) : filteredCalls.length > 0 ? (
               filteredCalls.map((call) => (
-                <tr key={call.id}>
+                <React.Fragment key={call.id}>
+                <tr>
                   <td>
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-secondary" />
@@ -239,6 +264,14 @@ const Meetings = () => {
                         <Copy size={14} /> Copy Link
                       </button>
                       <button 
+                        className="btn-secondary flex items-center gap-1"
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--primary)', background: 'rgba(0, 223, 162, 0.1)', color: 'var(--primary)' }}
+                        onClick={() => toggleParticipants(call.id, call.room_name)}
+                        title="View Participants"
+                      >
+                        <Users size={14} /> Participants
+                      </button>
+                      <button 
                         onClick={() => handleDeleteCall(call.id)} 
                         style={{ background: 'none', border: 'none', color: 'var(--danger)', opacity: 0.8, cursor: 'pointer', marginLeft: '0.5rem' }} 
                         title="Delete Meeting"
@@ -248,6 +281,55 @@ const Meetings = () => {
                     </div>
                   </td>
                 </tr>
+                {expandedCallId === call.id && (
+                  <tr>
+                    <td colSpan="5" style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)' }}>
+                      <div style={{ marginLeft: '1rem' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Meeting Log</h4>
+                        {!participantsData[call.id] ? (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading participants...</div>
+                        ) : participantsData[call.id].length === 0 ? (
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No participants have joined this meeting yet.</div>
+                        ) : (
+                          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Participant</th>
+                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Joined At</th>
+                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Left At</th>
+                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Duration</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {participantsData[call.id].map(p => {
+                                let durationStr = '-';
+                                if (p.joined_at && p.left_at) {
+                                  const diffMs = new Date(p.left_at) - new Date(p.joined_at);
+                                  const diffMins = Math.round(diffMs / 60000);
+                                  durationStr = diffMins > 0 ? `${diffMins} min` : '< 1 min';
+                                } else if (p.joined_at) {
+                                  durationStr = 'Still in meeting';
+                                }
+                                
+                                return (
+                                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem' }}>{p.participant_name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>({p.participant_email})</span></td>
+                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: 'var(--success)' }}>{new Date(p.joined_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</td>
+                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: p.left_at ? 'var(--danger)' : 'var(--text-secondary)' }}>{p.left_at ? new Date(p.left_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'Active'}</td>
+                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <Clock size={12} /> {durationStr}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))
             ) : (
               <tr>

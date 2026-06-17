@@ -10,6 +10,7 @@ const VideoCall = () => {
   const navigate = useNavigate();
   const [empInfo, setEmpInfo] = useState({ name: 'Employee', email: '' });
   const [isLoading, setIsLoading] = useState(true);
+  const [participantRecordId, setParticipantRecordId] = useState(null);
 
   useEffect(() => {
     async function init() {
@@ -114,7 +115,27 @@ const VideoCall = () => {
             email: empInfo.email
           }}
           onApiReady={(externalApi) => {
-            // Optional API hooks
+            externalApi.on('videoConferenceJoined', async () => {
+              const { data, error } = await supabase.from('meeting_participants').insert([{
+                room_name: roomId,
+                participant_name: empInfo.name,
+                participant_email: empInfo.email
+              }]).select();
+              if (data && data[0]) {
+                setParticipantRecordId(data[0].id);
+              }
+            });
+
+            externalApi.on('videoConferenceLeft', async () => {
+              // We use state/ref to update left_at
+              // However, React state inside this closure might be stale if we're not careful.
+              // To handle this, we can just do a general update for the most recent record for this user in this room
+              await supabase.from('meeting_participants')
+                .update({ left_at: new Date().toISOString() })
+                .eq('room_name', roomId)
+                .eq('participant_email', empInfo.email)
+                .is('left_at', null);
+            });
           }}
           getIFrameRef={(iframeRef) => {
             iframeRef.style.height = '100%';

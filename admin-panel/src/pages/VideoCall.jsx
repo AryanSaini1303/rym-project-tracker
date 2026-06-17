@@ -10,6 +10,7 @@ const VideoCall = () => {
   const navigate = useNavigate();
   const [adminInfo, setAdminInfo] = useState({ name: 'Admin', email: '' });
   const [isLoading, setIsLoading] = useState(true);
+  const [participantRecordId, setParticipantRecordId] = useState(null);
 
   useEffect(() => {
     async function init() {
@@ -112,8 +113,24 @@ const VideoCall = () => {
             email: adminInfo.email
           }}
           onApiReady={(externalApi) => {
-            // You can attach events here if needed, like listening for participant joined
-            // externalApi.addListener('videoConferenceLeft', handleEndCall);
+            externalApi.on('videoConferenceJoined', async () => {
+              const { data, error } = await supabaseAdmin.from('meeting_participants').insert([{
+                room_name: roomId,
+                participant_name: adminInfo.name,
+                participant_email: adminInfo.email
+              }]).select();
+              if (data && data[0]) {
+                setParticipantRecordId(data[0].id);
+              }
+            });
+
+            externalApi.on('videoConferenceLeft', async () => {
+              await supabaseAdmin.from('meeting_participants')
+                .update({ left_at: new Date().toISOString() })
+                .eq('room_name', roomId)
+                .eq('participant_email', adminInfo.email)
+                .is('left_at', null);
+            });
           }}
           getIFrameRef={(iframeRef) => {
             iframeRef.style.height = '100%';
