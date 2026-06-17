@@ -1,6 +1,6 @@
 export const triggerPushNotification = async (notifications) => {
-  // Try to use environment variable for production, fallback to local admin panel dev server
-  const apiUrl = import.meta.env.VITE_ADMIN_API_URL || 'http://localhost:5173';
+  // Use relative path so it automatically works on the live Vercel domain
+  const apiUrl = '';
   
   try {
     const promises = notifications.map(notif => 
