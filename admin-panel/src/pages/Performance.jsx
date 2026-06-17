@@ -107,6 +107,17 @@ const Performance = () => {
 
   useEffect(() => {
     fetchLeaderboard();
+
+    // Auto-refresh when task completions, meetings, or point configs change
+    const performanceSub = supabase
+      .channel('public:performance_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchLeaderboard())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => fetchLeaderboard())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => fetchLeaderboard())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'points_config' }, () => fetchLeaderboard())
+      .subscribe();
+
+    return () => supabase.removeChannel(performanceSub);
   }, []);
 
   // Sort by points descending

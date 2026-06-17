@@ -50,6 +50,16 @@ const Employees = () => {
 
   useEffect(() => {
     fetchEmployees();
+
+    // Auto-refresh when any employee profile is added/updated/deleted
+    const employeesSub = supabase
+      .channel('public:employees_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
+        fetchEmployees();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(employeesSub);
   }, []);
 
   // Update search term if URL changes via global search

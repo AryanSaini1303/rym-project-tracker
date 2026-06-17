@@ -47,6 +47,16 @@ const PointsConfig = () => {
 
   useEffect(() => {
     fetchConfigs();
+
+    // Auto-refresh if point config is changed from another session
+    const configSub = supabase
+      .channel('public:points_config_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'points_config' }, () => {
+        fetchConfigs();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(configSub);
   }, []);
 
   // Open Edit Modal

@@ -52,6 +52,16 @@ const Attendance = () => {
 
   useEffect(() => {
     fetchAttendance();
+
+    // Auto-refresh when employee clocks in/out or any attendance record changes
+    const attendanceSub = supabase
+      .channel('public:attendance_page')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        fetchAttendance();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(attendanceSub);
   }, []);
 
 

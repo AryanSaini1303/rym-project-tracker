@@ -33,8 +33,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Missing environment variables for push' });
     }
 
+    const vapidEmail = process.env.VITE_VAPID_EMAIL || 'mailto:contact@rym-grenergy.com';
+
     webpush.setVapidDetails(
-      'mailto:contact@rym-grenergy.com',
+      vapidEmail,
       vapidPublic,
       vapidPrivate
     );
