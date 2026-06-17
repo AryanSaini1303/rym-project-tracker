@@ -395,6 +395,19 @@ const Projects = () => {
               if (assigneesError) {
                 console.error('Failed to assign employees to tasks:', assigneesError);
                 toast.error("Tasks created, but some assignments failed to save.");
+              } else {
+                const notifications = assigneesToInsert.map(a => {
+                  const taskTitle = insertedTasks.find(t => t.id === a.task_id)?.title || 'a task';
+                  return {
+                    user_id: a.employee_id,
+                    title: 'New Task Assigned',
+                    message: `You have been assigned a new task: "${taskTitle}" in project "${newProject.title.trim()}"`,
+                    type: 'task',
+                    link: '/tasks'
+                  };
+                });
+                await supabaseAdmin.from('notifications').insert(notifications);
+                await triggerPushNotification(notifications);
               }
             }
           }
@@ -465,19 +478,38 @@ const Projects = () => {
         title: newTask.title.trim(),
         description: `Task created for project: ${quickTaskModal.projectName}`,
         status: 'todo',
-        assignee_id: newTask.assignee || null,
         due_date: newTask.dueDate || null,
         project_id: quickTaskModal.projectId
       }])
       .select();
 
-    if (!error) {
+    if (!error && data && data[0]) {
+      const insertedTask = data[0];
+      
+      if (newTask.assignee) {
+        await supabaseAdmin.from('task_assignees').insert([{
+          task_id: insertedTask.id,
+          employee_id: newTask.assignee,
+          status: 'todo'
+        }]);
+
+        const newNotification = [{
+          user_id: newTask.assignee,
+          title: 'New Task Assigned',
+          message: `You have been assigned a new task: "${newTask.title.trim()}" in project "${quickTaskModal.projectName}"`,
+          type: 'task',
+          link: '/tasks'
+        }];
+        await supabaseAdmin.from('notifications').insert(newNotification);
+        await triggerPushNotification(newNotification);
+      }
+
       // Reload projects to instantly update the task count
       fetchProjectsData();
       toast.success("Task created successfully!");
       closeQuickTask();
     } else {
-      toast.error("Failed to create task: " + error.message);
+      toast.error("Failed to create task: " + (error ? error.message : 'Unknown error'));
     }
     setIsSubmittingTask(false);
   };
@@ -566,6 +598,16 @@ const Projects = () => {
         toast.error(`Error assigning: ${error.message}`);
         return;
       }
+      
+      const newNotification = [{
+        user_id: employeeId,
+        title: 'New Task Assigned',
+        message: `You have been assigned to task: "${task.title}"`,
+        type: 'task',
+        link: '/tasks'
+      }];
+      await supabaseAdmin.from('notifications').insert(newNotification);
+      await triggerPushNotification(newNotification);
       
       const newAssignees = [...currentAssignees, { employees: { id: employeeId, name: employeeName } }];
       updateLocalTaskAssignees(taskId, newAssignees);
