@@ -288,10 +288,10 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
         {notificationPermission === 'default' && (
           <button 
             onClick={requestManualPermission}
-            className="btn-primary"
-            style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+            className="btn-primary enable-push-btn"
+            title="Enable Push Notifications"
           >
-            <BellRing size={14} /> Enable Notifications
+            <BellRing size={16} /> <span>Enable Alerts</span>
           </button>
         )}
 
