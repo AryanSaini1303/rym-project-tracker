@@ -115,10 +115,35 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
   };
 
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     const sub = supabase
       .channel('public:admin_header_notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
          fetchNotifications();
+         
+         if (payload.eventType === 'INSERT' && payload.new && payload.new.user_id === null) {
+           if ('Notification' in window && Notification.permission === 'granted') {
+             try {
+               if (navigator.serviceWorker) {
+                 navigator.serviceWorker.ready.then(registration => {
+                   registration.showNotification(payload.new.title || 'New Alert', {
+                     body: payload.new.message || '',
+                     icon: '/pwa-192x192.png'
+                   });
+                 }).catch(() => {
+                   new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
+                 });
+               } else {
+                 new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
+               }
+             } catch (e) {
+               new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
+             }
+           }
+         }
       })
       .subscribe();
 
