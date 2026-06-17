@@ -285,7 +285,7 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
       
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         
-        {notificationPermission === 'default' && (
+        {notificationPermission !== 'granted' && (
           <button 
             onClick={requestManualPermission}
             className="btn-primary enable-push-btn"
