@@ -1,29 +1,41 @@
 self.addEventListener('push', function (event) {
-  if (event.data) {
+  if (!event.data) return;
+
+  const showNotification = async () => {
+    // 1. Check if the user currently has the app open and focused
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    let isFocused = false;
+    for (let client of windowClients) {
+      if (client.focused) {
+        isFocused = true;
+        break;
+      }
+    }
+
+    // 2. If the app is open, DO NOT show a system notification (the app will show a toast instead)
+    if (isFocused) {
+      return;
+    }
+
+    // 3. Otherwise, the app is in the background, so show the system notification
     try {
       const data = event.data.json();
       const options = {
         body: data.body || '',
         icon: data.icon || '/pwa-192x192.png',
         badge: data.badge || '/pwa-192x192.png',
-        data: {
-          url: data.url || '/'
-        }
+        data: { url: data.url || '/' }
       };
-
-      event.waitUntil(
-        self.registration.showNotification(data.title || 'New Notification', options)
-      );
+      await self.registration.showNotification(data.title || 'New Notification', options);
     } catch (e) {
-      // Fallback if not JSON
-      event.waitUntil(
-        self.registration.showNotification('New Notification', {
-          body: event.data.text(),
-          icon: '/pwa-192x192.png'
-        })
-      );
+      await self.registration.showNotification('New Notification', {
+        body: event.data.text(),
+        icon: '/pwa-192x192.png'
+      });
     }
-  }
+  };
+
+  event.waitUntil(showNotification());
 });
 
 self.addEventListener('notificationclick', function (event) {

@@ -198,22 +198,10 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
          
          if (payload.eventType === 'INSERT' && payload.new && payload.new.user_id === null) {
            if ('Notification' in window && Notification.permission === 'granted') {
-             try {
-               if (navigator.serviceWorker) {
-                 navigator.serviceWorker.ready.then(registration => {
-                   registration.showNotification(payload.new.title || 'New Alert', {
-                     body: payload.new.message || '',
-                     icon: '/pwa-192x192.png'
-                   });
-                 }).catch(() => {
-                   new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
-                 });
-               } else {
-                 new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
-               }
-             } catch (e) {
-               new Notification(payload.new.title || 'New Alert', { body: payload.new.message || '' });
-             }
+             toast(`${payload.new.title || 'New Alert'}\n${payload.new.message || ''}`, {
+               icon: '🔔',
+               duration: 4000,
+             });
            }
          }
       })
