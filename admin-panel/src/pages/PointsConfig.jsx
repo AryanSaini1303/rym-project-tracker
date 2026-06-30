@@ -319,8 +319,8 @@ const PointsConfig = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Add Point Rule</h3>
               <button onClick={() => setShowAddModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
@@ -383,8 +383,8 @@ const PointsConfig = () => {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Edit Point Rule</h3>
               <button onClick={() => setShowEditModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>

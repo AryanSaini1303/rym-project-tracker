@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Clock, Check, Circle, AlertCircle, Loader2, X } from 'lucide-react';
 import { supabaseAdmin } from '../lib/supabaseClient';
 import '../pages/Projects.css';
@@ -88,18 +89,19 @@ const ProjectDetailsModal = ({ projectId, onClose }) => {
   };
 
   if (isLoading) {
-    return (
+    return ReactDOM.createPortal(
       <div className="modal-overlay" style={{ zIndex: 1000 }}>
         <Loader2 className="spinner" size={40} color="var(--primary)" />
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (!project) return null;
 
-  return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1000 }}>
-      <div className="modal-content glass project-details-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%', padding: 0 }}>
+  return ReactDOM.createPortal(
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 1000 }}>
+      <div className="modal-content glass project-details-modal" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%', padding: 0 }}>
         <div className="modal-header" style={{ padding: '2rem 2rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <div>
             <h2 style={{ fontSize: '1.8rem', marginBottom: '0.75rem', color: '#fff' }}>{project.title}</h2>
@@ -239,7 +241,8 @@ const ProjectDetailsModal = ({ projectId, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

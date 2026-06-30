@@ -376,8 +376,8 @@ const Performance = () => {
 
       {/* Manual Point Adjustment Modal */}
       {showPointsModal && selectedEmp && (
-        <div className="notes-modal-overlay" onClick={() => setShowPointsModal(false)}>
-          <div className="notes-modal glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+        <div className="notes-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowPointsModal(false); }}>
+          <div className="notes-modal glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Award size={20} className="text-primary" /> Adjust Points</h3>
               <button onClick={() => setShowPointsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>

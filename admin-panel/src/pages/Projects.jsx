@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Briefcase, Plus, Search, Calendar, CheckCircle2, Circle, AlertCircle, Loader2, UploadCloud, Edit2, Trash2, X, ChevronDown, Check, UserPlus, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -746,7 +747,7 @@ const Projects = () => {
                 <span className={`status-badge ${project.progress === 100 ? 'completed' : project.progress > 0 ? 'inprogress' : 'pending'}`}>
                   {project.progress === 100 ? 'Completed' : project.progress > 0 ? 'In Progress' : 'Not Started'}
                 </span>
-                <button onClick={(e) => { e.stopPropagation(); openQuickTask(project); }} style={{ background: 'rgba(0, 223, 162, 0.1)', border: '1px solid rgba(0, 223, 162, 0.2)', color: 'var(--primary)', borderRadius: '6px', padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s' }} onMouseEnter={(e)=>{e.currentTarget.style.background='var(--primary)'; e.currentTarget.style.color='#000';}} onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(0, 223, 162, 0.1)'; e.currentTarget.style.color='var(--primary)';}}>
+                <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openQuickTask(project); }} style={{ background: 'rgba(0, 223, 162, 0.1)', border: '1px solid rgba(0, 223, 162, 0.2)', color: 'var(--primary)', borderRadius: '6px', padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s' }} onMouseEnter={(e)=>{e.currentTarget.style.background='var(--primary)'; e.currentTarget.style.color='#000';}} onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(0, 223, 162, 0.1)'; e.currentTarget.style.color='var(--primary)';}}>
                   <Plus size={14} /> Add Task
                 </button>
               </div>
@@ -756,9 +757,9 @@ const Projects = () => {
       )}
 
       {/* Create / Edit Project Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content glass" onClick={(e) => e.stopPropagation()}>
+      {showModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }} style={{ zIndex: 1000 }}>
+          <div className="modal-content glass" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editProjectId ? 'Edit Project' : 'Create New Project'}</h2>
               <button className="btn-close-icon" onClick={closeModal}>&times;</button>
@@ -949,13 +950,14 @@ const Projects = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quick Add Task Modal */}
-      {quickTaskModal.show && (
-        <div className="modal-overlay" onClick={closeQuickTask} style={{ zIndex: 200 }}>
-          <div className="modal-content glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+      {quickTaskModal.show && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeQuickTask(); }} style={{ zIndex: 9999 }}>
+          <div className="modal-content glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
             <div className="modal-header">
               <h2>Add Task to Project</h2>
               <button className="btn-close-icon" onClick={closeQuickTask}>&times;</button>
@@ -1005,13 +1007,14 @@ const Projects = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Project Details Full View Modal */}
-      {selectedProject && (
-        <div className="modal-overlay" onClick={() => setSelectedProject(null)} style={{ zIndex: 100 }}>
-          <div className="modal-content glass project-details-modal" onClick={(e) => e.stopPropagation()}>
+      {selectedProject && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedProject(null); }} style={{ zIndex: 1000 }}>
+          <div className="modal-content glass project-details-modal" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{selectedProject.title}</h2>
@@ -1078,7 +1081,7 @@ const Projects = () => {
               <div className="task-board-section" style={{ marginTop: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h3 style={{ margin: 0 }}>Task Board</h3>
-                  <button className="btn-primary" onClick={() => openQuickTask(selectedProject)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
+                  <button type="button" className="btn-primary" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openQuickTask(selectedProject); }} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
                     <Plus size={14} style={{ marginRight: '0.25rem' }} /> Add Task
                   </button>
                 </div>
@@ -1227,7 +1230,8 @@ const Projects = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

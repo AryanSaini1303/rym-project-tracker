@@ -104,10 +104,9 @@ button {
 }
 .btn-primary:hover {
   background-color: var(--primary-hover);
-  transform: translateY(-1px);
 }
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.98);
 }
 
 .btn-secondary {

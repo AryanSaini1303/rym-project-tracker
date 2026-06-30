@@ -453,8 +453,8 @@ const Tasks = () => {
 
       {/* Create Task Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Create Task</h3>
               <button onClick={() => setShowModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
@@ -552,8 +552,8 @@ const Tasks = () => {
 
       {/* Missed Deadlines Record Modal */}
       {showMissedModal && (
-        <div className="modal-overlay" onClick={() => setShowMissedModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMissedModal(false); }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record

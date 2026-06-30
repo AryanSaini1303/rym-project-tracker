@@ -19,8 +19,8 @@ const AdminProfileModal = ({ profile, onClose }) => {
   };
 
   return ReactDOM.createPortal(
-    <div className="modal-overlay" style={{ zIndex: 9999, alignItems: 'flex-start', overflowY: 'auto', padding: '3rem 1rem' }}>
-      <div className="modal-content glass" style={{ margin: 'auto', display: 'flex', flexDirection: 'column', maxWidth: '750px', width: '100%', padding: '0', backgroundColor: '#13161c', position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ zIndex: 9999, alignItems: 'flex-start', overflowY: 'auto', padding: '3rem 1rem' }}>
+      <div className="modal-content glass" onMouseDown={(e) => e.stopPropagation()} style={{ margin: 'auto', display: 'flex', flexDirection: 'column', maxWidth: '750px', width: '100%', padding: '0', backgroundColor: '#13161c', position: 'relative', borderRadius: '16px', overflow: 'hidden' }}>
         
         {/* Header Section */}
         <div style={{ backgroundColor: 'rgba(19, 22, 28, 0.98)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

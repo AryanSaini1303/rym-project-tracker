@@ -235,8 +235,8 @@ const Attendance = () => {
 
       {/* Location Modal */}
       {selectedRecord && (
-        <div className="location-modal-overlay" onClick={() => setSelectedRecord(null)}>
-          <div className="location-modal glass" onClick={(e) => e.stopPropagation()}>
+        <div className="location-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedRecord(null); }}>
+          <div className="location-modal glass" onMouseDown={(e) => e.stopPropagation()}>
             <h3 style={{ marginBottom: '0.5rem' }}>Check-in Location</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               Employee: <strong>{selectedRecord.name}</strong>
