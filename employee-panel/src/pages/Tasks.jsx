@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -295,14 +296,14 @@ const Tasks = () => {
       </div>
 
       {/* Missed Deadlines Record Modal */}
-      {showMissedModal && (
-        <div className="modal-overlay" onClick={() => setShowMissedModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
+      {showMissedModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMissedModal(false); }} style={{ zIndex: 9999 }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record
               </h3>
-              <button onClick={() => setShowMissedModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>
@@ -348,7 +349,8 @@ const Tasks = () => {
               </table>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

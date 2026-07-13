@@ -354,62 +354,62 @@ const Projects = () => {
       if (!error && data && data[0]) {
         const projectId = data[0].id;
         
-        // Filter out empty task titles
-        const tasksToInsert = generatedTasks
-          .filter(t => t.title.trim() !== '')
-          .map(t => ({
-            project_id: projectId,
-            title: t.title.trim(),
-            description: t.description.trim() || `Task for project: ${data[0].title}`,
-            status: 'todo'
-          }));
+        // Filter out empty task titles and insert sequentially to guarantee exact 1-to-1 task_id correlation
+        const activeGeneratedTasks = generatedTasks.filter(t => t.title.trim() !== '');
 
-        if (tasksToInsert.length > 0) {
-          const { data: insertedTasks, error: tasksError } = await supabaseAdmin
-            .from('tasks')
-            .insert(tasksToInsert)
-            .select();
+        if (activeGeneratedTasks.length > 0) {
+          const insertedTasks = [];
+          const assigneesToInsert = [];
 
-          if (tasksError) {
-            console.error('Failed to create tasks:', tasksError);
-            toast.error("Project created, but tasks failed to save: " + tasksError.message);
-          } else if (insertedTasks) {
-            // Find active tasks (those that were not empty) and correlate them to inserted tasks
-            const activeGeneratedTasks = generatedTasks.filter(t => t.title.trim() !== '');
-            const assigneesToInsert = [];
+          for (const genTask of activeGeneratedTasks) {
+            const { data: taskData, error: taskError } = await supabaseAdmin
+              .from('tasks')
+              .insert([{
+                project_id: projectId,
+                title: genTask.title.trim(),
+                description: genTask.description.trim() || `Task for project: ${data[0].title}`,
+                status: 'todo'
+              }])
+              .select();
 
-            insertedTasks.forEach((insertedTask, idx) => {
-              const matchingGenTask = activeGeneratedTasks[idx];
-              if (matchingGenTask && matchingGenTask.assigneeId) {
+            if (taskError) {
+              console.error('Failed to create task:', taskError);
+            } else if (taskData && taskData[0]) {
+              const insertedTask = taskData[0];
+              insertedTasks.push(insertedTask);
+
+              if (genTask.assigneeId) {
                 assigneesToInsert.push({
                   task_id: insertedTask.id,
-                  employee_id: matchingGenTask.assigneeId,
+                  employee_id: genTask.assigneeId,
                   status: 'todo'
                 });
               }
-            });
+            }
+          }
 
-            if (assigneesToInsert.length > 0) {
-              const { error: assigneesError } = await supabaseAdmin
-                .from('task_assignees')
-                .insert(assigneesToInsert);
-              if (assigneesError) {
-                console.error('Failed to assign employees to tasks:', assigneesError);
-                toast.error("Tasks created, but some assignments failed to save.");
-              } else {
-                const notifications = assigneesToInsert.map(a => {
-                  const taskTitle = insertedTasks.find(t => t.id === a.task_id)?.title || 'a task';
-                  return {
-                    user_id: a.employee_id,
-                    title: 'New Task Assigned',
-                    message: `You have been assigned a new task: "${taskTitle}" in project "${newProject.title.trim()}"`,
-                    type: 'task',
-                    link: '/tasks'
-                  };
-                });
-                await supabaseAdmin.from('notifications').insert(notifications);
-                await triggerPushNotification(notifications);
-              }
+          if (insertedTasks.length === 0) {
+            toast.error("Project created, but tasks failed to save.");
+          } else if (assigneesToInsert.length > 0) {
+            const { error: assigneesError } = await supabaseAdmin
+              .from('task_assignees')
+              .insert(assigneesToInsert);
+            if (assigneesError) {
+              console.error('Failed to assign employees to tasks:', assigneesError);
+              toast.error("Tasks created, but some assignments failed to save.");
+            } else {
+              const notifications = assigneesToInsert.map(a => {
+                const taskTitle = insertedTasks.find(t => t.id === a.task_id)?.title || 'a task';
+                return {
+                  user_id: a.employee_id,
+                  title: 'New Task Assigned',
+                  message: `You have been assigned a new task: "${taskTitle}" in project "${newProject.title.trim()}"`,
+                  type: 'task',
+                  link: '/tasks'
+                };
+              });
+              await supabaseAdmin.from('notifications').insert(notifications);
+              await triggerPushNotification(notifications);
             }
           }
         }
@@ -994,6 +994,7 @@ const Projects = () => {
                 <label>Due Date</label>
                 <input 
                   type="date" 
+                  min={new Date().toISOString().split('T')[0]}
                   value={newTask.dueDate}
                   onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
                   className="form-input"

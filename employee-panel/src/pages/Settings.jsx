@@ -74,6 +74,11 @@ const Settings = () => {
       return;
     }
 
+    if (profile.phone && !/^\d{10}$/.test(profile.phone.trim())) {
+      toast.error('Please enter a valid 10-digit phone number.');
+      return;
+    }
+
     setIsSaving(true);
 
     // 1. Update user metadata in auth
@@ -159,7 +164,6 @@ const Settings = () => {
                 className="form-input-box" 
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                required
               />
             </div>
 
@@ -177,11 +181,13 @@ const Settings = () => {
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>Phone Number</label>
               <input 
-                type="text" 
+                type="tel" 
                 className="form-input-box" 
-                placeholder="e.g. +91 98765 43210"
+                placeholder="e.g. 9876543210"
+                maxLength="10"
+                pattern="^[0-9]{10}$"
                 value={profile.phone}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
               />
             </div>
 

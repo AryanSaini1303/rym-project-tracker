@@ -61,19 +61,22 @@ const Performance = () => {
     
     const { data: configData } = await supabase
       .from('points_config')
-      .select('rule_key, points_value');
+      .select('rule_key, points_value')
+      .order('id', { ascending: false });
       
     if (configData) {
       const globalObj = configData.find(c => c.rule_key === 'monthlyTarget');
-      if (globalObj) {
+      if (globalObj && globalObj.points_value) {
         targetPts = globalObj.points_value;
         setGlobalTarget(targetPts);
       }
       
       configData.forEach(c => {
-        if (c.rule_key.startsWith('target_')) {
+        if (c.rule_key && c.rule_key.startsWith('target_')) {
           const empId = c.rule_key.replace('target_', '');
-          individualTargets[empId] = c.points_value;
+          if (!individualTargets[empId]) {
+            individualTargets[empId] = c.points_value;
+          }
         }
       });
     }
@@ -174,11 +177,14 @@ const Performance = () => {
       const targetVal = parseInt(newTarget);
       setGlobalTarget(targetVal);
 
-      const { data } = await supabaseAdmin.from('points_config').select('id').eq('rule_key', 'monthlyTarget').single();
-      if (data) {
-        await supabaseAdmin.from('points_config').update({ points_value: targetVal }).eq('id', data.id);
+      const { data: existingRows } = await supabaseAdmin.from('points_config').select('id').eq('rule_key', 'monthlyTarget').order('id', { ascending: false });
+      if (existingRows && existingRows.length > 0) {
+        await supabaseAdmin.from('points_config').update({ points_value: targetVal, rule_name: 'Monthly Progress Target' }).eq('id', existingRows[0].id);
+        if (existingRows.length > 1) {
+          await supabaseAdmin.from('points_config').delete().in('id', existingRows.slice(1).map(r => r.id));
+        }
       } else {
-        await supabaseAdmin.from('points_config').insert({ rule_key: 'monthlyTarget', points_value: targetVal });
+        await supabaseAdmin.from('points_config').insert({ rule_name: 'Monthly Progress Target', rule_key: 'monthlyTarget', points_value: targetVal });
       }
       fetchLeaderboard();
     }
@@ -194,11 +200,14 @@ const Performance = () => {
       
       if (!isNaN(targetVal) && targetVal > 0) {
         // Upsert custom target
-        const { data } = await supabaseAdmin.from('points_config').select('id').eq('rule_key', ruleKey).single();
-        if (data) {
-          await supabaseAdmin.from('points_config').update({ points_value: targetVal }).eq('id', data.id);
+        const { data: existingRows } = await supabaseAdmin.from('points_config').select('id').eq('rule_key', ruleKey).order('id', { ascending: false });
+        if (existingRows && existingRows.length > 0) {
+          await supabaseAdmin.from('points_config').update({ points_value: targetVal, rule_name: `${emp.name} Target` }).eq('id', existingRows[0].id);
+          if (existingRows.length > 1) {
+            await supabaseAdmin.from('points_config').delete().in('id', existingRows.slice(1).map(r => r.id));
+          }
         } else {
-          await supabaseAdmin.from('points_config').insert({ rule_key: ruleKey, points_value: targetVal });
+          await supabaseAdmin.from('points_config').insert({ rule_name: `${emp.name} Target`, rule_key: ruleKey, points_value: targetVal });
         }
       } else {
         // Delete custom target if blank or 0
@@ -341,17 +350,19 @@ const Performance = () => {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', whiteSpace: 'nowrap' }}>
                           <button 
-                            className="btn-secondary flex items-center gap-1"
-                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)' }}
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0 }}
                             onClick={() => handleEditPoints(emp)}
                           >
                             <Edit3 size={14} /> Adjust Points
                           </button>
                           <button 
-                            className="btn-secondary flex items-center gap-1"
-                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)' }}
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0 }}
                             onClick={() => handleEditIndividualTarget(emp)}
                             title="Set custom goal for this employee"
                           >
@@ -376,11 +387,11 @@ const Performance = () => {
 
       {/* Manual Point Adjustment Modal */}
       {showPointsModal && selectedEmp && (
-        <div className="notes-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowPointsModal(false); }}>
-          <div className="notes-modal glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+        <div className="notes-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowPointsModal(false); }}>
+          <div className="notes-modal glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', margin: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Award size={20} className="text-primary" /> Adjust Points</h3>
-              <button onClick={() => setShowPointsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onClick={(e) => { e.stopPropagation(); setShowPointsModal(false); }}><X size={20} /></button>
             </div>
             
             <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
@@ -411,7 +422,7 @@ const Performance = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowPointsModal(false)} className="btn-close" style={{ margin: 0, padding: '0.6rem 1rem' }}>Cancel</button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setShowPointsModal(false); }} className="btn-secondary" style={{ margin: 0, padding: '0.6rem 1rem' }}>Cancel</button>
                 <button type="submit" disabled={isSubmitting || pointsAdjustment == 0} className="btn-primary" style={{ padding: '0.6rem 1rem' }}>
                   {isSubmitting ? 'Saving...' : 'Apply Points'}
                 </button>

@@ -135,6 +135,7 @@ const VideoCall = () => {
                 .eq('room_name', roomId)
                 .eq('participant_email', empInfo.email)
                 .is('left_at', null);
+              navigate('/meetings');
             });
           }}
           getIFrameRef={(iframeRef) => {

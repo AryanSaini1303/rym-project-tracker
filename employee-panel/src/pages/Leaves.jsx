@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -228,8 +229,12 @@ const Leaves = () => {
           <p className="page-subtitle" style={{ marginBottom: 0 }}>Submit leave applications and check review states.</p>
         </div>
         <button 
+          type="button"
           className="btn-primary flex items-center gap-2" 
-          onClick={() => {
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             setModalMode('Apply');
             setLeaveType('Annual Leave');
             setStartDate(new Date().toISOString().split('T')[0]);
@@ -271,8 +276,12 @@ const Leaves = () => {
                     {leave.status === 'Pending' ? (
                       <div className="flex gap-2">
                         <button 
+                          type="button"
                           className="action-btn" 
-                          onClick={() => {
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setModalMode('Edit');
                             setSelectedLeaveId(leave.id);
                             setLeaveType(leave.type);
@@ -286,9 +295,15 @@ const Leaves = () => {
                           <Edit2 size={15} />
                         </button>
                         <button 
+                          type="button"
                           className="action-btn" 
                           style={{ color: 'var(--danger)' }}
-                          onClick={() => handleDeleteLeave(leave.id)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteRequest(leave.id);
+                          }}
                           title="Delete Leave"
                         >
                           <Trash2 size={15} />
@@ -312,14 +327,14 @@ const Leaves = () => {
       </div>
 
       {/* Apply / Edit Leave Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-window glass" onClick={(e) => e.stopPropagation()}>
+      {showModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }} style={{ zIndex: 9999 }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>
                 {modalMode === 'Apply' ? 'Apply for Leave' : 'Edit Leave Request'}
               </h3>
-              <button onClick={() => setShowModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmitLeave}>
@@ -379,14 +394,15 @@ const Leaves = () => {
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="btn-cancel" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : modalMode === 'Apply' ? 'Submit Request' : 'Save Changes'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

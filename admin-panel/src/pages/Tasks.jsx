@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
@@ -123,6 +124,12 @@ const Tasks = () => {
 
     if (!taskTitle.trim() || !taskDesc.trim()) {
       setFormError('Please enter both title and description.');
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (taskDate && taskDate < todayStr) {
+      setFormError('Due date cannot be in the past.');
       return;
     }
 
@@ -452,12 +459,12 @@ const Tasks = () => {
       </div>
 
       {/* Create Task Modal */}
-      {showModal && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+      {showModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false); }} style={{ zIndex: 9999 }}>
           <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Create Task</h3>
-              <button onClick={() => setShowModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleCreateTask}>
@@ -536,29 +543,31 @@ const Tasks = () => {
                 <input
                   type="date"
                   className="modal-input"
+                  min={new Date().toISOString().split('T')[0]}
                   value={taskDate}
                   onChange={(e) => setTaskDate(e.target.value)}
                 />
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="btn-cancel" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }}>Cancel</button>
                 <button type="submit" className="btn-primary">Create Task</button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Missed Deadlines Record Modal */}
-      {showMissedModal && (
-        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMissedModal(false); }}>
+      {showMissedModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowMissedModal(false); }} style={{ zIndex: 9999 }}>
           <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '700px', width: '90%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record
               </h3>
-              <button onClick={() => setShowMissedModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>
@@ -610,7 +619,8 @@ const Tasks = () => {
               </table>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -52,18 +52,21 @@ const Performance = () => {
 
     const { data: configData } = await supabase
       .from('points_config')
-      .select('rule_key, points_value');
+      .select('rule_key, points_value')
+      .order('id', { ascending: false });
       
     if (configData) {
       const globalObj = configData.find(c => c.rule_key === 'monthlyTarget');
-      if (globalObj) {
+      if (globalObj && globalObj.points_value) {
         targetPts = globalObj.points_value;
       }
 
       configData.forEach(c => {
-        if (c.rule_key.startsWith('target_')) {
+        if (c.rule_key && c.rule_key.startsWith('target_')) {
           const empId = c.rule_key.replace('target_', '');
-          individualTargets[empId] = c.points_value;
+          if (!individualTargets[empId]) {
+            individualTargets[empId] = c.points_value;
+          }
         }
       });
     }

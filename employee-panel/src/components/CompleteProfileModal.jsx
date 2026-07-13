@@ -36,6 +36,10 @@ const CompleteProfileModal = ({ profile, onClose, onProfileUpdated }) => {
   };
 
   const handleSave = async () => {
+    if (formData.phone && !/^\d{10}$/.test(String(formData.phone).trim())) {
+      toast.error('Please enter a valid 10-digit phone number.');
+      return;
+    }
     setIsSaving(true);
     try {
       const { data, error } = await supabase.auth.updateUser({
@@ -62,10 +66,17 @@ const CompleteProfileModal = ({ profile, onClose, onProfileUpdated }) => {
         </div>
         {isEditing ? (
           <input 
-            type={type}
+            type={name === 'phone' ? 'tel' : type}
             name={name}
+            maxLength={name === 'phone' ? '10' : undefined}
             value={formData[name]}
-            onChange={handleInputChange}
+            onChange={(e) => {
+              if (name === 'phone') {
+                handleInputChange({ target: { name, value: e.target.value.replace(/\D/g, '').slice(0, 10) } });
+              } else {
+                handleInputChange(e);
+              }
+            }}
             style={{ 
               width: '100%', 
               background: 'rgba(255,255,255,0.03)', 

@@ -11,7 +11,8 @@ const Dashboard = () => {
     points: 0,
     rank: '--',
     pendingTasks: 0,
-    completedTasks: 0
+    completedTasks: 0,
+    target: 400
   });
 
   // Attendance states
@@ -119,11 +120,26 @@ const Dashboard = () => {
     const rankIndex = scores.findIndex(s => s.id === empId);
     const userRank = rankIndex !== -1 ? `#${rankIndex + 1}` : '--';
 
+    // Get target from points_config or fallback to 400
+    let targetPts = 400;
+    const { data: configData } = await supabase.from('points_config').select('rule_key, points_value');
+    if (configData) {
+      const globalObj = configData.find(c => c.rule_key === 'monthlyTarget');
+      if (globalObj && globalObj.points_value) {
+        targetPts = globalObj.points_value;
+      }
+      const individualObj = configData.find(c => c.rule_key === `target_${empId}`);
+      if (individualObj && individualObj.points_value) {
+        targetPts = individualObj.points_value;
+      }
+    }
+
     setStats({
       points: currentEmpPoints,
       rank: userRank,
       pendingTasks: pendingTaskCount || 0,
-      completedTasks: completedTaskCount || 0
+      completedTasks: completedTaskCount || 0,
+      target: targetPts
     });
 
     setIsLoading(false);
@@ -299,8 +315,8 @@ const Dashboard = () => {
                 </div>
                 <div className="info-line">
                   <span className="info-label">Check-in Punctuality:</span>
-                  <span className={`status-badge status-${todayAttendance.status.toLowerCase()}`}>
-                    {todayAttendance.status}
+                  <span className={`status-badge status-${(todayAttendance.status || 'present').toLowerCase()}`}>
+                    {todayAttendance.status || 'Present'}
                   </span>
                 </div>
                 <div className="info-line" style={{ border: 'none', paddingBottom: 0 }}>
@@ -344,20 +360,20 @@ const Dashboard = () => {
         <div className="card progress-panel">
           <h3 style={{ marginBottom: '1.25rem' }}>Monthly Points Objective</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: '1.4', marginBottom: '1.5rem' }}>
-            Earn performance points by checking in on-time (+5 pts), logging successful client onboardings (+30 pts), and finishing tasks (+15 pts). Achieve your target of 400 points.
+            Earn performance points by checking in on-time (+5 pts), logging successful client onboardings (+30 pts), and finishing tasks (+15 pts). Achieve your target of {stats.target || 400} points.
           </p>
 
           <div style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.5rem' }}>
               <span>Objective Milestone</span>
-              <span>{Math.min(Math.round((stats.points / 400) * 100), 100)}%</span>
+              <span>{Math.min(Math.round((stats.points / (stats.target || 400)) * 100), 100)}%</span>
             </div>
             <div className="progress-track" style={{ height: '12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', overflow: 'hidden' }}>
               <div 
                 className="progress-fill" 
                 style={{ 
                   height: '100%', 
-                  width: `${Math.min(Math.round((stats.points / 400) * 100), 100)}%`, 
+                  width: `${Math.min(Math.round((stats.points / (stats.target || 400)) * 100), 100)}%`, 
                   backgroundColor: 'var(--primary)', 
                   boxShadow: '0 0 10px var(--primary-glow)',
                   borderRadius: '6px',
@@ -367,7 +383,7 @@ const Dashboard = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.5rem' }}>
               <span>{stats.points} points logged</span>
-              <span>400 points Target</span>
+              <span>{stats.target || 400} points Target</span>
             </div>
           </div>
         </div>

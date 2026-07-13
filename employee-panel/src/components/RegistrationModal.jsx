@@ -19,6 +19,11 @@ const RegistrationModal = ({ session, onComplete }) => {
       return;
     }
 
+    if (phone && !/^\d{10}$/.test(phone.trim())) {
+      setError('Please enter a valid 10-digit phone number.');
+      return;
+    }
+
     setIsLoading(true);
 
     const { error: updateError } = await supabase
@@ -86,11 +91,13 @@ const RegistrationModal = ({ session, onComplete }) => {
           <div className="form-group-reg">
             <label>Phone Number</label>
             <input
-              type="text"
+              type="tel"
               className="register-input"
-              placeholder="e.g. +91 98765 43210"
+              placeholder="e.g. 9876543210"
+              maxLength="10"
+              pattern="^[0-9]{10}$"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
             />
           </div>
 

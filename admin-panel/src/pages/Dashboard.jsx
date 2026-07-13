@@ -125,7 +125,7 @@ const Dashboard = () => {
             feed.push({
               type: 'attendance',
               name: att.employees.name,
-              detail: `clocked in ${att.status.toLowerCase()} on ${att.date}`,
+              detail: `clocked in ${(att.status || 'present').toLowerCase()} on ${att.date}`,
               time: att.clock_in ? new Date(att.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
               timestamp: att.clock_in ? new Date(att.clock_in).getTime() : new Date(att.date).getTime()
             });
