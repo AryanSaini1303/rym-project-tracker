@@ -464,7 +464,7 @@ const Tasks = () => {
           <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Create Task</h3>
-              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleCreateTask}>
@@ -549,9 +549,9 @@ const Tasks = () => {
                 />
               </div>
 
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Task</button>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} style={{ margin: 0 }}>Cancel</button>
+                <button type="submit" className="btn-primary" style={{ width: 'auto' }}>Create Task</button>
               </div>
             </form>
           </div>
@@ -567,7 +567,7 @@ const Tasks = () => {
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record
               </h3>
-              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>

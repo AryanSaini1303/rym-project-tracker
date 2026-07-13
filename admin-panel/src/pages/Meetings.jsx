@@ -348,7 +348,7 @@ const Meetings = () => {
           <div className="notes-modal glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Video size={20} className="text-primary" /> Start Video Call</h3>
-              <button onClick={resetModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); resetModal(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); resetModal(); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             {generatedLink ? (

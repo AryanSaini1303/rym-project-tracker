@@ -334,7 +334,7 @@ const Leaves = () => {
               <h3 className="modal-title" style={{ margin: 0 }}>
                 {modalMode === 'Apply' ? 'Apply for Leave' : 'Edit Leave Request'}
               </h3>
-              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmitLeave}>

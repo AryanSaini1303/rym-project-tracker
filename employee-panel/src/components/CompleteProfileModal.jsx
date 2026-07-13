@@ -130,7 +130,7 @@ const CompleteProfileModal = ({ profile, onClose, onProfileUpdated }) => {
                 <Edit2 size={14} /> Edit Profile
               </button>
             )}
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-secondary)', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={18} />
             </button>
           </div>

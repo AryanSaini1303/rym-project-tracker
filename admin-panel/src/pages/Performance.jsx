@@ -138,6 +138,11 @@ const Performance = () => {
   const podium3 = filteredLeaderboard[2];
   const listUsers = filteredLeaderboard.slice(3);
 
+  const closeModal = () => {
+    setShowPointsModal(false);
+    setSelectedEmp(null);
+  };
+
   const handleEditPoints = (emp) => {
     setSelectedEmp(emp);
     setPointsAdjustment(0);
@@ -163,7 +168,7 @@ const Performance = () => {
     if (!error) {
       toast.success(`Successfully adjusted points for ${selectedEmp.name}`);
       fetchLeaderboard(); // Refresh scores
-      setShowPointsModal(false);
+      closeModal();
     } else {
       toast.error("Failed to adjust points: " + error.message);
     }
@@ -387,11 +392,18 @@ const Performance = () => {
 
       {/* Manual Point Adjustment Modal */}
       {showPointsModal && selectedEmp && (
-        <div className="notes-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowPointsModal(false); }}>
-          <div className="notes-modal glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', margin: 'auto' }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }} style={{ zIndex: 99999 }}>
+          <div className="modal-content glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%', margin: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Award size={20} className="text-primary" /> Adjust Points</h3>
-              <button type="button" className="modal-close-btn" onClick={(e) => { e.stopPropagation(); setShowPointsModal(false); }}><X size={20} /></button>
+              <button 
+                type="button" 
+                className="modal-close-btn" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeModal(); }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); closeModal(); }}
+              >
+                <X size={20} />
+              </button>
             </div>
             
             <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
@@ -422,7 +434,14 @@ const Performance = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={(e) => { e.stopPropagation(); setShowPointsModal(false); }} className="btn-secondary" style={{ margin: 0, padding: '0.6rem 1rem' }}>Cancel</button>
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeModal(); }} 
+                  className="btn-secondary" 
+                  style={{ margin: 0, padding: '0.6rem 1rem' }}
+                >
+                  Cancel
+                </button>
                 <button type="submit" disabled={isSubmitting || pointsAdjustment == 0} className="btn-primary" style={{ padding: '0.6rem 1rem' }}>
                   {isSubmitting ? 'Saving...' : 'Apply Points'}
                 </button>

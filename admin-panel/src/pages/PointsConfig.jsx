@@ -323,7 +323,7 @@ const PointsConfig = () => {
           <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Add Point Rule</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleAddSubmit}>
@@ -387,7 +387,7 @@ const PointsConfig = () => {
           <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 className="modal-title" style={{ margin: 0 }}>Edit Point Rule</h3>
-              <button onClick={() => setShowEditModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowEditModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowEditModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleEditSubmit}>

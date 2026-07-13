@@ -237,7 +237,10 @@ const Attendance = () => {
       {selectedRecord && (
         <div className="location-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedRecord(null); }}>
           <div className="location-modal glass" onMouseDown={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: '0.5rem' }}>Check-in Location</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0 }}>Check-in Location</h3>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRecord(null); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRecord(null); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               Employee: <strong>{selectedRecord.name}</strong>
             </p>

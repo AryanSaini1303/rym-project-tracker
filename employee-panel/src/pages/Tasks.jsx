@@ -303,7 +303,7 @@ const Tasks = () => {
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record
               </h3>
-              <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>

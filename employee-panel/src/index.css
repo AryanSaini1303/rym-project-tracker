@@ -131,28 +131,36 @@ button {
 
 /* Global Modal Styles */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(5, 7, 12, 0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-color: rgba(5, 7, 12, 0.85) !important;
+  display: grid !important;
+  place-items: center !important;
+  z-index: 100000 !important;
   backdrop-filter: blur(8px);
+  padding: 1rem !important;
+  overflow: hidden !important;
 }
 
-.modal-window {
+.modal-window,
+.modal-content {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 2.25rem;
   width: 100%;
   max-width: 500px;
+  margin: 0 !important;
   box-shadow: 0 15px 30px rgba(0, 223, 162, 0.05);
   animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center center;
+  position: relative;
+  z-index: 100001 !important;
+  max-height: calc(100vh - 2rem) !important;
+  overflow-y: auto !important;
 }
 
 @keyframes modalSlide {

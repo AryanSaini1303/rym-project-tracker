@@ -114,7 +114,7 @@ const ProjectDetailsModal = ({ projectId, onClose }) => {
               </span>
             </div>
           </div>
-          <button className="btn-close-icon" onClick={onClose} style={{ alignSelf: 'flex-start' }}><X size={24} /></button>
+          <button type="button" className="btn-close-icon" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} style={{ alignSelf: 'flex-start' }}><X size={24} /></button>
         </div>
         
         <div className="project-details-body" style={{ padding: '2rem' }}>
