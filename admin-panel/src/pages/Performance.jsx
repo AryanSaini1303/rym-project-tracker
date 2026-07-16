@@ -298,11 +298,9 @@ const Performance = () => {
             onChange={(e) => setDeptFilter(e.target.value)}
           >
             <option value="All">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Design">Design</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Sales">Sales</option>
-            <option value="Management">Management</option>
+            {Array.from(new Set(leaderboard.map(item => item.dept).filter(Boolean))).map(dept => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
           </select>
         </div>
 

@@ -106,7 +106,7 @@ const Employees = () => {
       setSelectedEmp(null);
       setFormName('');
       setFormEmail('');
-      setFormDept('Engineering');
+      setFormDept('');
       setFormRole('Employee');
     }
     setShowModal(true);
@@ -251,10 +251,9 @@ const Employees = () => {
             onChange={(e) => setDeptFilter(e.target.value)}
           >
             <option value="All">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Design">Design</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Management">Management</option>
+            {Array.from(new Set(employees.map(item => item.department).filter(Boolean))).map(dept => (
+              <option key={dept} value={dept}>{dept}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -362,15 +361,8 @@ const Employees = () => {
                   onChange={(e) => setFormDept(e.target.value)}
                 />
                 <datalist id="department-options">
-                  <option value="Engineering" />
-                  <option value="Design" />
-                  <option value="Marketing" />
-                  <option value="Management" />
-                  {/* Dynamically include any other custom departments currently in use */}
-                  {Array.from(new Set(employees.map(e => e.department)))
-                    .filter(d => d && !['Engineering', 'Design', 'Marketing', 'Management'].includes(d))
-                    .map(d => (
-                      <option key={d} value={d} />
+                  {Array.from(new Set(employees.map(e => e.department).filter(Boolean))).map(d => (
+                    <option key={d} value={d} />
                   ))}
                 </datalist>
               </div>
