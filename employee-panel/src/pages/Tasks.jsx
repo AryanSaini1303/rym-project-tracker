@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X } from 'lucide-react';
+import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { triggerPushNotification } from '../lib/push';
 
@@ -11,6 +11,16 @@ const Tasks = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMissedModal, setShowMissedModal] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [projectsList, setProjectsList] = useState([]);
+  const [newTaskForm, setNewTaskForm] = useState({
+    title: '',
+    description: '',
+    project_id: '',
+    due_date: '',
+    priority: 'Medium'
+  });
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     todo: true,
     inprogress: true,
@@ -20,6 +30,105 @@ const Tasks = () => {
 
   const toggleSection = (key) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const fetchProjects = async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*');
+    if (!error && data) {
+      const sorted = [...data].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      setProjectsList(sorted);
+    } else if (error) {
+      console.error('Error fetching projects list:', error);
+    }
+  };
+
+  const handleCreateSelfTask = async (e) => {
+    e.preventDefault();
+    if (!newTaskForm.title.trim()) {
+      toast.error('Please enter a task title.');
+      return;
+    }
+    if (!employee) {
+      toast.error('Employee profile not loaded yet.');
+      return;
+    }
+
+    setIsSubmittingTask(true);
+
+    const priorityNote = newTaskForm.priority ? `\n[Priority: ${newTaskForm.priority}]` : '';
+    const taskPayload = {
+      title: newTaskForm.title.trim(),
+      description: (newTaskForm.description.trim() || 'Verbal task added by employee.') + priorityNote,
+      assignee_id: employee.id,
+      project_id: newTaskForm.project_id ? newTaskForm.project_id : null,
+      status: 'todo',
+      due_date: newTaskForm.due_date || null
+    };
+
+    // 1. Insert into tasks table
+    const { data: insertedTask, error: taskError } = await supabase
+      .from('tasks')
+      .insert([taskPayload])
+      .select()
+      .single();
+
+    if (taskError) {
+      toast.error('Error creating task: ' + taskError.message);
+      setIsSubmittingTask(false);
+      return;
+    }
+
+    // 2. Insert into task_assignees table for multi-assignee system compatibility
+    if (insertedTask) {
+      const { error: assigneeError } = await supabase
+        .from('task_assignees')
+        .insert([{
+          task_id: insertedTask.id,
+          employee_id: employee.id,
+          status: 'todo'
+        }]);
+
+      if (assigneeError) {
+        console.error('Error linking assignee:', assigneeError);
+      }
+
+      // 3. Insert notification for both Admin board and Employee confirmation
+      const selectedProjectTitle = projectsList.find(p => p.id === newTaskForm.project_id)?.title || 'General / Miscellaneous Tasks';
+      const notificationPayload = [
+        {
+          user_id: null,
+          title: 'New Verbal Task Added',
+          message: `${employee?.name || 'An employee'} added verbal task: "${newTaskForm.title.trim()}" in ${selectedProjectTitle}`,
+          type: 'task',
+          link: '/projects'
+        },
+        {
+          user_id: employee.id,
+          title: 'Task Created Successfully',
+          message: `You added verbal task: "${newTaskForm.title.trim()}" in ${selectedProjectTitle}`,
+          type: 'task',
+          link: '/tasks'
+        }
+      ];
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert(notificationPayload);
+
+      if (notifError) {
+        console.error('Error creating task notifications:', notifError);
+      } else {
+        await triggerPushNotification(notificationPayload);
+      }
+    }
+
+    toast.success('Task added successfully! Synced to Admin Panel.');
+    setNewTaskForm({ title: '', description: '', project_id: '', due_date: '', priority: 'Medium' });
+    setShowAddTaskModal(false);
+    setIsSubmittingTask(false);
+    fetchEmployeeTasks();
   };
 
   const fetchEmployeeTasks = async () => {
@@ -97,6 +206,7 @@ const Tasks = () => {
 
   useEffect(() => {
     fetchEmployeeTasks();
+    fetchProjects();
   }, []);
 
   const handleStatusChange = async (taskId, newStatus) => {
@@ -182,9 +292,14 @@ const Tasks = () => {
           <h1 className="page-title" style={{ margin: 0 }}>My Tasks Board</h1>
           <p className="page-subtitle" style={{ margin: 0, marginTop: '4px' }}>Track and update the status of your assigned field assignments.</p>
         </div>
-        <button className="btn-secondary flex items-center gap-2" onClick={() => setShowMissedModal(true)} style={{ border: '1px solid var(--danger)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem 1rem', marginLeft: 'auto' }}>
-          <AlertCircle size={18} /> Missed Deadlines
-        </button>
+        <div className="flex items-center gap-2" style={{ marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="btn-primary flex items-center gap-2" onClick={() => { fetchProjects(); setShowAddTaskModal(true); }} style={{ padding: '0.5rem 1rem' }}>
+            <Plus size={18} /> Add Task
+          </button>
+          <button className="btn-secondary flex items-center gap-2" onClick={() => setShowMissedModal(true)} style={{ border: '1px solid var(--danger)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem 1rem' }}>
+            <AlertCircle size={18} /> Missed Deadlines
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search */}
@@ -347,6 +462,112 @@ const Tasks = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Verbal / Self Task Modal */}
+      {showAddTaskModal && ReactDOM.createPortal(
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAddTaskModal(false); }} style={{ zIndex: 9999 }}>
+          <div className="modal-window glass" onMouseDown={(e) => e.stopPropagation()} style={{ maxWidth: '550px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 className="modal-title" style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>Add Verbal / Self Task</h3>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Create a task related to an ongoing project or general assignment.</p>
+              </div>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleCreateSelfTask}>
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Task Title *</label>
+                <input
+                  type="text"
+                  className="filter-input"
+                  style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.95rem' }}
+                  placeholder="e.g. Inspect solar wiring at Site B"
+                  value={newTaskForm.title}
+                  onChange={(e) => setNewTaskForm({ ...newTaskForm, title: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Project</label>
+                <select
+                  className="filter-input"
+                  style={{ width: '100%', padding: '0.65rem 0.85rem', fontSize: '0.92rem' }}
+                  value={newTaskForm.project_id}
+                  onChange={(e) => setNewTaskForm({ ...newTaskForm, project_id: e.target.value })}
+                >
+                  <option value="">Miscellaneous / General Task (No Project)</option>
+                  {projectsList.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.title} {proj.status ? `(${proj.status})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Description (Optional)</label>
+                <textarea
+                  className="filter-input"
+                  style={{ width: '100%', minHeight: '80px', padding: '0.65rem 0.85rem', fontSize: '0.9rem', resize: 'vertical' }}
+                  placeholder="Provide any verbal instructions or notes mentioned by the Admin..."
+                  value={newTaskForm.description}
+                  onChange={(e) => setNewTaskForm({ ...newTaskForm, description: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="form-group">
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Due Date</label>
+                  <input
+                    type="date"
+                    className="filter-input"
+                    style={{ width: '100%', padding: '0.6rem 0.85rem', fontSize: '0.9rem' }}
+                    value={newTaskForm.due_date}
+                    onChange={(e) => setNewTaskForm({ ...newTaskForm, due_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Priority</label>
+                  <select
+                    className="filter-input"
+                    style={{ width: '100%', padding: '0.6rem 0.85rem', fontSize: '0.9rem' }}
+                    value={newTaskForm.priority}
+                    onChange={(e) => setNewTaskForm({ ...newTaskForm, priority: e.target.value })}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowAddTaskModal(false)}
+                  style={{ padding: '0.6rem 1.25rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmittingTask}
+                  style={{ padding: '0.6rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {isSubmittingTask ? <Loader2 className="spinner" size={16} /> : null}
+                  {isSubmittingTask ? 'Creating...' : 'Create Task'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body

@@ -432,15 +432,31 @@ const Projects = () => {
   const handleDeleteProject = async (id) => {
     toast((t) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <p style={{ margin: 0, fontWeight: 500, fontSize: '0.95rem' }}>Are you sure you want to delete this project? Tasks attached to it will not be deleted, but they will be disconnected from the project.</p>
+        <p style={{ margin: 0, fontWeight: 500, fontSize: '0.95rem' }}>Are you sure you want to delete this project? All tasks inside this project will also be permanently deleted from both the Admin and Employee panels.</p>
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
           <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '0.85rem', transition: 'all 0.2s' }}>Cancel</button>
           <button onClick={async () => {
             toast.dismiss(t.id);
+            // 1. Find all task IDs for this project
+            const { data: projectTasks } = await supabaseAdmin.from('tasks').select('id').eq('project_id', id);
+            const taskIds = projectTasks ? projectTasks.map(t => t.id) : [];
+
+            // 2. Delete from task_assignees first
+            if (taskIds.length > 0) {
+              await supabaseAdmin.from('task_assignees').delete().in('task_id', taskIds);
+            }
+
+            // 3. Delete from tasks table
+            await supabaseAdmin.from('tasks').delete().eq('project_id', id);
+
+            // 4. Delete the project table row
             const { error } = await supabaseAdmin.from('projects').delete().eq('id', id);
             if (!error) {
               setProjects(projects.filter(p => p.id !== id));
-              toast.success("Project deleted successfully.");
+              if (selectedProject?.id === id) {
+                setSelectedProject(null);
+              }
+              toast.success("Project and all related tasks deleted successfully.");
             } else {
               toast.error("Failed to delete project: " + error.message);
             }
