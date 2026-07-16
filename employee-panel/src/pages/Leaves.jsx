@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { triggerPushNotification } from '../lib/push';
-import './Leaves.css';
 
 const Leaves = () => {
   const [leaves, setLeaves] = useState([]);

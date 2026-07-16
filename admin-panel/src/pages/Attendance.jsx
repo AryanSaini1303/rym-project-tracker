@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, CheckCircle, Clock, XCircle, Calendar, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import './Attendance.css';
 
 const Attendance = () => {
   const [records, setRecords] = useState([]);
@@ -83,7 +82,7 @@ const Attendance = () => {
       <div className="attendance-header">
         <div>
           <h1 className="page-title">Attendance Management</h1>
-          <p className="page-subtitle">Track check-ins, punctuality, and coordinates in real-time.</p>
+          <p className="page-subtitle">Track check-ins (Morning: 9:00 - 10:30 AM), check-outs (6:00 - 7:00 PM), and coordinates in real-time.</p>
         </div>
       </div>
 

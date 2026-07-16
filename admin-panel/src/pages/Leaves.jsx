@@ -3,7 +3,6 @@ import { Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import { triggerPushNotification } from '../lib/push';
-import './Leaves.css';
 
 const Leaves = () => {
   const [leaves, setLeaves] = useState([]);

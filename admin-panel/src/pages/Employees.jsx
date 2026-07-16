@@ -5,7 +5,6 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import AdminProfileModal from '../components/AdminProfileModal';
-import './Employees.css';
 
 const Employees = () => {
   const [employees, setEmployees] = useState([]);

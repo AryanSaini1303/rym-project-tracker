@@ -3,7 +3,6 @@ import { Users, CheckCircle, Clock, CalendarX } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { supabase } from '../lib/supabaseClient';
 import ProjectDetailsModal from '../components/ProjectDetailsModal';
-import './Dashboard.css';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -357,7 +356,7 @@ const Dashboard = () => {
   });
 
   return (
-    <div>
+    <div style={{ minHeight: '100%', width: '100%', position: 'relative', overflowAnchor: 'none' }}>
       <h1 className="page-title">Dashboard Overview</h1>
       <p className="page-subtitle">Welcome back, here's what's happening today.</p>
 

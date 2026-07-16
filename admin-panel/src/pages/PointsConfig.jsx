@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Coins, CheckCircle, Save, RotateCcw, AlertTriangle, Plus, Edit2, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
-import './PointsConfig.css';
 
 const defaultPoints = {
   clockIn: 5,

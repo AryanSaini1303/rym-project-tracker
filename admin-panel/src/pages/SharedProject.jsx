@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Clock, Check, Circle, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { supabaseAdmin } from '../lib/supabaseClient';
-import './Projects.css';
 
 const SharedProject = () => {
   const { id } = useParams();

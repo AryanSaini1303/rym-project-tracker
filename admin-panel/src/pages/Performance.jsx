@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Award, Search, Filter, Edit3, X, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase, supabaseAdmin } from '../lib/supabaseClient';
-import './Performance.css';
 
 const Performance = () => {
   const [leaderboard, setLeaderboard] = useState([]);

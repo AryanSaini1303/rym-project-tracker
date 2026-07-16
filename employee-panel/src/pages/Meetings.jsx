@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, Video, ExternalLink, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import './Meetings.css';
 
 const Meetings = () => {
   const [videoCalls, setVideoCalls] = useState([]);

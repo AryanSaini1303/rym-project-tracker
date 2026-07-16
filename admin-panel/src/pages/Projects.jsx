@@ -8,7 +8,6 @@ import { triggerPushNotification } from '../lib/push';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import mammoth from 'mammoth/mammoth.browser';
-import './Projects.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Clock, Check, Circle, AlertCircle, Loader2, X } from 'lucide-react';
 import { supabaseAdmin } from '../lib/supabaseClient';
-import '../pages/Projects.css';
 
 const ProjectDetailsModal = ({ projectId, onClose }) => {
   const [project, setProject] = useState(null);

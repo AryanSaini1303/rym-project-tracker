@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Award, CheckSquare, MapPin, Clock, Loader2, Trophy, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import './Dashboard.css';
 
 const Dashboard = () => {
   const [employee, setEmployee] = useState(null);
@@ -162,9 +161,10 @@ const Dashboard = () => {
     const lng = 77.5946 + randomOffset();
     const address = "RYM Grenergy Site Zone B, Bangalore";
 
-    // Determine status (cutoff 09:00 AM)
+    // Determine status (morning clock-in window 9:00 AM - 10:30 AM)
     const hours = now.getHours();
-    const status = (hours < 9 || (hours === 9 && now.getMinutes() === 0)) ? 'Present' : 'Late';
+    const minutes = now.getMinutes();
+    const status = (hours < 10 || (hours === 10 && minutes <= 30)) ? 'Present' : 'Late';
 
     const { data, error } = await supabase
       .from('attendance')
@@ -290,6 +290,16 @@ const Dashboard = () => {
           {!todayAttendance ? (
             <div className="widget-body">
               <p className="widget-text">You are not clocked in today. Please register your starting field location coordinates to begin operations.</p>
+              <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Morning Clock In:</span>
+                  <strong style={{ color: 'var(--success)' }}>9:00 AM - 10:30 AM</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Evening Check Out:</span>
+                  <strong style={{ color: 'var(--primary)' }}>6:00 PM - 7:00 PM</strong>
+                </div>
+              </div>
               <button 
                 className="btn-primary clock-btn" 
                 onClick={handleClockIn}
@@ -325,6 +335,11 @@ const Dashboard = () => {
                     {Number(todayAttendance.lat).toFixed(4)}, {Number(todayAttendance.lng).toFixed(4)}
                   </span>
                 </div>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.6rem 0.9rem', marginBottom: '1.25rem', fontSize: '0.82rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Expected Check Out Window:</span>
+                <strong style={{ color: 'var(--primary)' }}>6:00 PM - 7:00 PM</strong>
               </div>
 
               <button 

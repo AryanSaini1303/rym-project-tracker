@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Zap, Loader2 } from 'lucide-react';
-import './RegistrationModal.css';
 
 const RegistrationModal = ({ session, onComplete }) => {
   const [name, setName] = useState(session.user.user_metadata?.full_name || session.user.user_metadata?.name || '');

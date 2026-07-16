@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../lib/supabaseClient';
 import { triggerPushNotification } from '../lib/push';
-import './Meetings.css';
 
 const Meetings = () => {
   const [videoCalls, setVideoCalls] = useState([]);

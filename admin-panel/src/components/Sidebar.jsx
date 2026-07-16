@@ -3,7 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, CheckSquare, CalendarDays, Settings, Zap, MapPin, Briefcase, Trophy, Coins, FolderKanban, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
-import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose, onDotChange }) => {
   const location = useLocation();

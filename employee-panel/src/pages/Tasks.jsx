@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { triggerPushNotification } from '../lib/push';
-import './Tasks.css';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);

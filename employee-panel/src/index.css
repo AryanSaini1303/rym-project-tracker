@@ -36,11 +36,19 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow-x: hidden;
   font-size: 15px;
 }
 
@@ -67,7 +75,8 @@ button {
 /* Common Layout */
 .app-container {
   display: flex;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -77,12 +86,18 @@ button {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 .page-content {
   flex: 1;
   padding: 1.75rem 2rem;
   overflow-y: auto;
+  min-height: 0;
+  height: 100%;
+  position: relative;
+  overflow-anchor: none;
 }
 
 /* Layout Utilities */

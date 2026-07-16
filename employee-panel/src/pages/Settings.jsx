@@ -4,7 +4,6 @@ import { Shield, Bell, Moon, LogOut, CheckCircle, Loader2, Award } from 'lucide-
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
 import CompleteProfileModal from '../components/CompleteProfileModal';
-import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();

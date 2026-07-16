@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import CompleteProfileModal from './CompleteProfileModal';
-import './Header.css';
 
 const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const navigate = useNavigate();

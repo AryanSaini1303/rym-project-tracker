@@ -3,7 +3,6 @@ import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as Im
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import './Header.css';
 
 const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const navigate = useNavigate();

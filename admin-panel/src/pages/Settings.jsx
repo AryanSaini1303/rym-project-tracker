@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Settings as SettingsIcon, Bell, Shield, Moon, LogOut, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
-import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();

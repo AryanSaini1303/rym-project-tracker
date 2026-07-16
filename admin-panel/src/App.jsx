@@ -22,8 +22,6 @@ const ALLOWED_ADMIN_EMAILS = import.meta.env.VITE_ALLOWED_ADMIN_EMAILS
   ? import.meta.env.VITE_ALLOWED_ADMIN_EMAILS.split(',').map(email => email.trim().toLowerCase())
   : [];
 
-import PullToRefresh from 'react-simple-pull-to-refresh';
-
 import { triggerPushNotification } from './lib/push';
 
 function AppContent() {
@@ -34,10 +32,6 @@ function AppContent() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
   const isSharedProject = location.pathname.startsWith('/share/projects/');
-
-  const handleRefresh = async () => {
-    window.location.reload();
-  };
 
   useEffect(() => {
     const verifySession = async (sessionToCheck) => {
@@ -187,23 +181,21 @@ function AppContent() {
       <div className="main-content">
         <Header onMenuToggle={() => setSidebarOpen(prev => !prev)} hasSidebarDot={hasSidebarDot} />
         <div className="page-content">
-          <PullToRefresh onRefresh={handleRefresh}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/employees" element={<Employees />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/leaves" element={<Leaves />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/meetings" element={<Meetings />} />
-              <Route path="/performance" element={<Performance />} />
-              <Route path="/points" element={<PointsConfig />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/video-call/:roomId" element={<VideoCall />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </PullToRefresh>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/leaves" element={<Leaves />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/meetings" element={<Meetings />} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/points" element={<PointsConfig />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/video-call/:roomId" element={<VideoCall />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
       </div>
     </div>

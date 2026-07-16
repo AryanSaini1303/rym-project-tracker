@@ -4,7 +4,6 @@ import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight, Aler
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import { triggerPushNotification } from '../lib/push';
-import './Tasks.css';
 
 
 const Tasks = () => {
