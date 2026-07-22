@@ -93,6 +93,11 @@ const Dashboard = () => {
       .select('employee_id, points_earned')
       .eq('outcome', 'Success');
 
+    const { data: attendanceData } = await supabase
+      .from('attendance')
+      .select('employee_id, status')
+      .eq('status', 'Present');
+
     let currentEmpPoints = 0;
     const scores = (allEmps || []).map(emp => {
       const oldTaskPts = taskData
@@ -106,8 +111,12 @@ const Dashboard = () => {
       const meetPts = meetingData
         ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + (m.points_earned || 0), 0)
         : 0;
+        
+      const attPts = attendanceData
+        ? attendanceData.filter(a => a.employee_id === emp.id).length * 5
+        : 0;
 
-      const total = oldTaskPts + newTaskPts + meetPts;
+      const total = oldTaskPts + newTaskPts + meetPts + attPts;
       if (emp.id === empId) {
         currentEmpPoints = total;
       }

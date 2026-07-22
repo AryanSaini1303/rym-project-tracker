@@ -45,6 +45,12 @@ const Performance = () => {
       .select('employee_id, points_earned')
       .eq('outcome', 'Success');
 
+    // 3.5 Get attendance points
+    const { data: attendanceData } = await supabase
+      .from('attendance')
+      .select('employee_id, status')
+      .eq('status', 'Present');
+
     // 4. Get targets from config
     let targetPts = 400;
     const individualTargets = {};
@@ -83,12 +89,16 @@ const Performance = () => {
       const meetingPts = meetingData
         ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + (m.points_earned || 0), 0)
         : 0;
+        
+      const attPts = attendanceData
+        ? attendanceData.filter(a => a.employee_id === emp.id).length * 5
+        : 0;
 
       return {
         id: emp.id,
         name: emp.name,
         dept: emp.department,
-        points: oldTaskPts + newTaskPts + meetingPts,
+        points: oldTaskPts + newTaskPts + meetingPts + attPts,
         target: individualTargets[emp.id] || targetPts
       };
     });
