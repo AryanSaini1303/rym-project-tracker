@@ -532,7 +532,29 @@ const Projects = () => {
 
   const updateTaskStatus = async (taskId, newStatus) => {
     setOpenStatusMenu(null);
-    const { error } = await supabaseAdmin.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    
+    // Retrieve points configuration value if marking as done
+    let points = 0;
+    if (newStatus === 'done' || newStatus === 'completed') {
+      const { data: configData } = await supabaseAdmin
+        .from('points_config')
+        .select('points_value')
+        .eq('rule_key', 'taskCompletion')
+        .maybeSingle();
+      
+      points = configData ? configData.points_value : 15; // default 15 points
+    }
+
+    const updatePayload = { status: newStatus };
+    if (newStatus === 'done' || newStatus === 'completed') {
+      updatePayload.points_awarded = points;
+      updatePayload.completed_at = new Date().toISOString();
+    } else {
+      updatePayload.points_awarded = null;
+      updatePayload.completed_at = null;
+    }
+
+    const { error } = await supabaseAdmin.from('tasks').update(updatePayload).eq('id', taskId);
     if (!error) {
       // Automatically sync the new status to all individual assignees
       const { data: assigneesData } = await supabaseAdmin.from('task_assignees').update({ status: newStatus }).eq('task_id', taskId).select('employee_id');

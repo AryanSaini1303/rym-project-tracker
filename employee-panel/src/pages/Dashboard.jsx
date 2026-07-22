@@ -101,11 +101,11 @@ const Dashboard = () => {
     let currentEmpPoints = 0;
     const scores = (allEmps || []).map(emp => {
       const oldTaskPts = taskData
-        ? taskData.filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + (t.points_awarded || 0), 0)
+        ? taskData.filter(t => t.assignee_id === emp.id).reduce((sum, t) => sum + (t.points_awarded || 15), 0)
         : 0;
 
       const newTaskPts = taskAssigneeData
-        ? taskAssigneeData.filter(ta => ta.employee_id === emp.id).reduce((sum, ta) => sum + (ta.tasks?.points_awarded || 0), 0)
+        ? taskAssigneeData.filter(ta => ta.employee_id === emp.id).reduce((sum, ta) => sum + (ta.tasks?.points_awarded || 15), 0)
         : 0;
 
       const meetPts = meetingData

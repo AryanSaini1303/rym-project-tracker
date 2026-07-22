@@ -182,9 +182,30 @@ const Tasks = () => {
   };
 
   const handleStatusChange = async (id, newStatus) => {
+    // Retrieve points configuration value if marking as done
+    let points = 0;
+    if (newStatus === 'done' || newStatus === 'completed') {
+      const { data: configData } = await supabase
+        .from('points_config')
+        .select('points_value')
+        .eq('rule_key', 'taskCompletion')
+        .maybeSingle();
+      
+      points = configData ? configData.points_value : 15;
+    }
+
+    const updatePayload = { status: newStatus };
+    if (newStatus === 'done' || newStatus === 'completed') {
+      updatePayload.points_awarded = points;
+      updatePayload.completed_at = new Date().toISOString();
+    } else {
+      updatePayload.points_awarded = null;
+      updatePayload.completed_at = null;
+    }
+
     const { error: taskError } = await supabase
       .from('tasks')
-      .update({ status: newStatus })
+      .update(updatePayload)
       .eq('id', id);
 
     const { error: assigneesError, data: assigneesData } = await supabase
