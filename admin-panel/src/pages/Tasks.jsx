@@ -10,6 +10,7 @@ const Tasks = () => {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [showMissedModal, setShowMissedModal] = useState(false);
   const [employees, setEmployees] = useState([]);
@@ -303,16 +304,31 @@ const Tasks = () => {
 
       {/* Filter and Search */}
       <div className="card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
-        <div className="input-wrapper" style={{ width: '100%' }}>
-          <Search className="input-icon" size={18} style={{ left: '0.85rem' }} />
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="Search tasks by title or description..."
-            style={{ width: '100%', paddingLeft: '2.5rem' }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+          <div className="input-wrapper" style={{ flex: 1 }}>
+            <Search className="input-icon" size={18} style={{ left: '0.85rem' }} />
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="Search tasks by title or description..."
+              style={{ width: '100%', paddingLeft: '2.5rem' }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div style={{ minWidth: '200px' }}>
+            <select
+              className="filter-input"
+              value={selectedEmployeeFilter}
+              onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
+              style={{ width: '100%', cursor: 'pointer', backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)' }}
+            >
+              <option value="ALL">All Employees</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -321,10 +337,16 @@ const Tasks = () => {
           const secTasks = tasks.filter(t => {
             const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                   t.desc.toLowerCase().includes(searchTerm.toLowerCase());
-            if (sec.key === 'no-project') {
-              return !t.project_id && matchesSearch;
+            
+            let matchesEmp = true;
+            if (selectedEmployeeFilter !== 'ALL') {
+              matchesEmp = t.task_assignees && t.task_assignees.some(ta => ta.employees?.id === selectedEmployeeFilter);
             }
-            return t.project_id === sec.key && matchesSearch;
+
+            if (sec.key === 'no-project') {
+              return !t.project_id && matchesSearch && matchesEmp;
+            }
+            return t.project_id === sec.key && matchesSearch && matchesEmp;
           });
 
           // Only render projects that have tasks OR show all projects if no search term is active

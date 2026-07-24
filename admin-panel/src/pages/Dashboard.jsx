@@ -53,6 +53,7 @@ const Dashboard = () => {
           project_id,
           assignee_id,
           task_assignees (
+            employee_id,
             status
           )
         `);
@@ -212,7 +213,9 @@ const Dashboard = () => {
   // Dynamic calculation for Task Productivity AreaChart
   const filteredTasksForChart = allTasksList.filter(t => {
     const matchProj = selectedProjFilter === 'ALL' || t.project_id === selectedProjFilter;
-    const matchEmp = selectedEmpFilter === 'ALL' || t.assignee_id === selectedEmpFilter;
+    const matchEmp = selectedEmpFilter === 'ALL' || 
+                     t.assignee_id === selectedEmpFilter || 
+                     (t.task_assignees && t.task_assignees.some(ta => ta.employee_id === selectedEmpFilter));
     return matchProj && matchEmp;
   });
 
