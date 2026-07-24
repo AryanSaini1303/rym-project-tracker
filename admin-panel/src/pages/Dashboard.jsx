@@ -623,7 +623,7 @@ const Dashboard = () => {
           <div className="modal-content glass" style={{ maxWidth: '400px' }}>
             <div className="modal-header">
               <h3>Attendance for {selectedAttDay.name}</h3>
-              <button className="close-btn" onClick={() => setSelectedAttDay(null)}>&times;</button>
+              <button className="close-btn" onClick={() => setSelectedAttDay(null)} style={{ color: 'white', fontSize: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>&times;</button>
             </div>
             <div className="modal-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
               {selectedAttDay.details.length === 0 ? (

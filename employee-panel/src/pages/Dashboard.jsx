@@ -42,7 +42,9 @@ const Dashboard = () => {
     const empId = empData.id;
 
     // 2. Get today's attendance log
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
     const { data: attData } = await supabase
       .from('attendance')
       .select('*')
@@ -155,6 +157,18 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
+
+    // Re-fetch data when the user switches back to this tab
+    // This fixes stale state issues (like leaving the tab open overnight)
+    const handleFocus = () => {
+      loadDashboardData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleClockIn = async () => {
@@ -162,7 +176,16 @@ const Dashboard = () => {
     setIsAttendanceLoading(true);
 
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
+    if (hours < 9) {
+      toast.error("You cannot clock in before 9:00 AM.");
+      setIsAttendanceLoading(false);
+      return;
+    }
 
     // Mock coordinates with small random offset
     const randomOffset = () => (Math.random() - 0.5) * 0.01;
@@ -171,9 +194,7 @@ const Dashboard = () => {
     const address = "RYM Grenergy Site Zone B, Bangalore";
 
     // Determine status (morning clock-in window 9:00 AM - 10:30 AM)
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const status = (hours < 10 || (hours === 10 && minutes <= 30)) ? 'Present' : 'Late';
+    const status = (hours === 9 || (hours === 10 && minutes <= 30)) ? 'Present' : 'Late';
 
     const { data, error } = await supabase
       .from('attendance')
@@ -207,6 +228,19 @@ const Dashboard = () => {
     setIsAttendanceLoading(true);
 
     const now = new Date();
+    const hours = now.getHours();
+
+    if (hours < 18) {
+      toast.error("You cannot clock out before your shift ends at 6:00 PM.");
+      setIsAttendanceLoading(false);
+      return;
+    }
+    
+    if (hours >= 19) {
+      toast.error("The clock-out window has closed. Please contact your manager.");
+      setIsAttendanceLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from('attendance')
@@ -296,7 +330,7 @@ const Dashboard = () => {
             <h3 style={{ margin: 0 }}>Daily Attendance</h3>
           </div>
 
-          {!todayAttendance ? (
+          {(!todayAttendance || todayAttendance.date !== `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`) ? (
             <div className="widget-body">
               <p className="widget-text">You are not clocked in today. Please register your starting field location coordinates to begin operations.</p>
               <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
