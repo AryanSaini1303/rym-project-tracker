@@ -42,7 +42,22 @@ function AppContent() {
       }
       
       const userEmail = sessionToCheck.user?.email?.toLowerCase();
-      if (!ALLOWED_ADMIN_EMAILS.includes(userEmail)) {
+      let isAuthorized = ALLOWED_ADMIN_EMAILS.includes(userEmail);
+
+      if (!isAuthorized) {
+        // Fallback: Check if they are promoted to Admin in the database
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('role, is_active')
+          .eq('email', userEmail)
+          .single();
+          
+        if (empData && empData.role === 'Admin' && empData.is_active !== false) {
+          isAuthorized = true;
+        }
+      }
+
+      if (!isAuthorized) {
         await supabase.auth.signOut();
         setSession(null);
         setIsLoading(false);
