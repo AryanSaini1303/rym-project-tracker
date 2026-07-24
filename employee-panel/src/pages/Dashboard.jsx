@@ -70,7 +70,7 @@ const Dashboard = () => {
     // 5. Calculate Leaderboard rank and points
     // Fetch all employees and calculate scores
     const { data: allEmps } = await supabase.from('employees').select('id, name');
-    
+
     const { data: taskData } = await supabase
       .from('tasks')
       .select('assignee_id, points_awarded')
@@ -111,7 +111,7 @@ const Dashboard = () => {
       const meetPts = meetingData
         ? meetingData.filter(m => m.employee_id === emp.id).reduce((sum, m) => sum + (m.points_earned || 0), 0)
         : 0;
-        
+
       const attPts = attendanceData
         ? attendanceData.filter(a => a.employee_id === emp.id).length * 5
         : 0;
@@ -293,7 +293,7 @@ const Dashboard = () => {
         <div className="card attendance-widget glass">
           <div className="widget-header">
             <Clock size={20} color="var(--primary)" />
-            <h3 style={{ margin: 0 }}>Daily Field Attendance</h3>
+            <h3 style={{ margin: 0 }}>Daily Attendance</h3>
           </div>
 
           {!todayAttendance ? (
@@ -309,8 +309,8 @@ const Dashboard = () => {
                   <strong style={{ color: 'var(--primary)' }}>6:00 PM - 7:00 PM</strong>
                 </div>
               </div>
-              <button 
-                className="btn-primary clock-btn" 
+              <button
+                className="btn-primary clock-btn"
                 onClick={handleClockIn}
                 disabled={isAttendanceLoading}
               >
@@ -351,8 +351,8 @@ const Dashboard = () => {
                 <strong style={{ color: 'var(--primary)' }}>6:00 PM - 7:00 PM</strong>
               </div>
 
-              <button 
-                className="btn-primary clock-btn clock-out-btn" 
+              <button
+                className="btn-primary clock-btn clock-out-btn"
                 onClick={handleClockOut}
                 disabled={isAttendanceLoading}
               >
@@ -393,12 +393,12 @@ const Dashboard = () => {
               <span>{Math.min(Math.round((stats.points / (stats.target || 400)) * 100), 100)}%</span>
             </div>
             <div className="progress-track" style={{ height: '12px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '6px', overflow: 'hidden' }}>
-              <div 
-                className="progress-fill" 
-                style={{ 
-                  height: '100%', 
-                  width: `${Math.min(Math.round((stats.points / (stats.target || 400)) * 100), 100)}%`, 
-                  backgroundColor: 'var(--primary)', 
+              <div
+                className="progress-fill"
+                style={{
+                  height: '100%',
+                  width: `${Math.min(Math.round((stats.points / (stats.target || 400)) * 100), 100)}%`,
+                  backgroundColor: 'var(--primary)',
                   boxShadow: '0 0 10px var(--primary-glow)',
                   borderRadius: '6px',
                   transition: 'width 0.5s ease-out'

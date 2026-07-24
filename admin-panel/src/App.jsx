@@ -84,6 +84,26 @@ function AppContent() {
   useEffect(() => {
     if (!session) return;
     
+    // Global Real-time Listener for all relevant tables
+    const channel = supabase.channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          // Trigger a global custom event whenever any table changes
+          window.dispatchEvent(new Event('supabase_realtime_update'));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    
     const checkOverdue = async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);

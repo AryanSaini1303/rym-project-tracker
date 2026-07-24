@@ -55,6 +55,12 @@ const Tasks = () => {
       return;
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (newTaskForm.due_date && newTaskForm.due_date < todayStr) {
+      toast.error('Due date cannot be in the past.');
+      return;
+    }
+
     setIsSubmittingTask(true);
 
     const priorityNote = newTaskForm.priority ? `\n[Priority: ${newTaskForm.priority}]` : '';
@@ -528,6 +534,7 @@ const Tasks = () => {
                     type="date"
                     className="filter-input"
                     style={{ width: '100%', padding: '0.6rem 0.85rem', fontSize: '0.9rem' }}
+                    min={new Date().toISOString().split('T')[0]}
                     value={newTaskForm.due_date}
                     onChange={(e) => setNewTaskForm({ ...newTaskForm, due_date: e.target.value })}
                   />

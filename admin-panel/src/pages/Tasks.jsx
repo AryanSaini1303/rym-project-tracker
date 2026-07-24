@@ -108,13 +108,13 @@ const Tasks = () => {
     fetchProjects();
     fetchTasks();
     
-    const tasksSub = supabase
-      .channel('public:tasks_page')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => fetchTasks())
-      .subscribe();
+    const handleUpdate = () => {
+      fetchTasks();
+    };
+
+    window.addEventListener('supabase_realtime_update', handleUpdate);
       
-    return () => supabase.removeChannel(tasksSub);
+    return () => window.removeEventListener('supabase_realtime_update', handleUpdate);
   }, []);
 
   const handleCreateTask = async (e) => {
@@ -126,11 +126,6 @@ const Tasks = () => {
       return;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (taskDate && taskDate < todayStr) {
-      setFormError('Due date cannot be in the past.');
-      return;
-    }
 
     const { data: taskData, error: taskError } = await supabase
       .from('tasks')
@@ -563,7 +558,6 @@ const Tasks = () => {
                 <input
                   type="date"
                   className="modal-input"
-                  min={new Date().toISOString().split('T')[0]}
                   value={taskDate}
                   onChange={(e) => setTaskDate(e.target.value)}
                 />

@@ -65,17 +65,15 @@ const Leaves = () => {
   useEffect(() => {
     fetchLeaves();
 
-    // Auto-refresh when an employee submits a new leave request or status changes
-    const leavesSubscription = supabase
-      .channel('public:leaves')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaves' }, (payload) => {
-        console.log('[Admin Leaves] Realtime update received, auto-refreshing...');
-        fetchLeaves();
-      })
-      .subscribe();
+    const handleUpdate = () => {
+      console.log('[Admin Leaves] Realtime update received, auto-refreshing...');
+      fetchLeaves();
+    };
+
+    window.addEventListener('supabase_realtime_update', handleUpdate);
 
     return () => {
-      supabase.removeChannel(leavesSubscription);
+      window.removeEventListener('supabase_realtime_update', handleUpdate);
     };
   }, []);
 

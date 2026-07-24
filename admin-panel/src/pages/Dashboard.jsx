@@ -12,6 +12,7 @@ const Dashboard = () => {
     onLeaveToday: 0
   });
   const [dashboardProjectModalId, setDashboardProjectModalId] = useState(null);
+  const [selectedAttDay, setSelectedAttDay] = useState(null);
   const [activities, setActivities] = useState([]);
   const [leaveChartData, setLeaveChartData] = useState([]);
   const [allTasksList, setAllTasksList] = useState([]);
@@ -21,10 +22,10 @@ const Dashboard = () => {
   const [selectedEmpFilter, setSelectedEmpFilter] = useState('ALL');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('7DAYS');
 
-  // Leave Chart state
-  const [rawLeavesList, setRawLeavesList] = useState([]);
-  const [selectedLeaveEmpFilter, setSelectedLeaveEmpFilter] = useState('ALL');
-  const [selectedLeaveTimeFilter, setSelectedLeaveTimeFilter] = useState('30DAYS');
+  // Attendance Chart state
+  const [rawAttendanceList, setRawAttendanceList] = useState([]);
+  const [selectedAttEmpFilter, setSelectedAttEmpFilter] = useState('ALL');
+  const [selectedAttTimeFilter, setSelectedAttTimeFilter] = useState('30DAYS');
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -105,9 +106,9 @@ const Dashboard = () => {
         onLeaveToday: approvedLeavesCount || 0
       });
 
-      // Fetch raw leaves for dynamic chart filtering
-      const { data: allLeaves } = await supabase.from('leaves').select('employee_id, status, start_date');
-      setRawLeavesList(allLeaves || []);
+      // Fetch raw attendance for dynamic chart filtering
+      const { data: allAttendance } = await supabase.from('attendance').select('employee_id, status, date, employees:employee_id(name)');
+      setRawAttendanceList(allAttendance || []);
 
       // 4. Fetch latest activities
       const feed = [];
@@ -197,17 +198,14 @@ const Dashboard = () => {
 
     loadDashboardData();
 
-    // Auto-refresh when any key activity happens (clock-ins, meetings, leaves, tasks)
-    const dashboardSubscription = supabase
-      .channel('public:dashboard_feed')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => loadDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => loadDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaves' }, () => loadDashboardData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => loadDashboardData())
-      .subscribe();
+    const handleUpdate = () => {
+      loadDashboardData();
+    };
+
+    window.addEventListener('supabase_realtime_update', handleUpdate);
 
     return () => {
-      supabase.removeChannel(dashboardSubscription);
+      window.removeEventListener('supabase_realtime_update', handleUpdate);
     };
   }, []);
 
@@ -310,48 +308,59 @@ const Dashboard = () => {
     }
   });
 
-  // Dynamic calculation for Leave Statistics Stacked BarChart
-  const filteredLeavesForChart = rawLeavesList.filter(l => {
-    const matchEmp = selectedLeaveEmpFilter === 'ALL' || l.employee_id === selectedLeaveEmpFilter;
+  // Dynamic calculation for Attendance Statistics Stacked BarChart
+  const filteredAttForChart = rawAttendanceList.filter(a => {
+    const matchEmp = selectedAttEmpFilter === 'ALL' || a.employee_id === selectedAttEmpFilter;
     return matchEmp;
   });
 
-  const leaveDataArray = [];
+  const attDataArray = [];
   
-  if (selectedLeaveTimeFilter === '7DAYS') {
+  if (selectedAttTimeFilter === '7DAYS') {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      leaveDataArray.push({ dateStr: localDateStr, name: days[d.getDay()], Approved: 0, Pending: 0, Rejected: 0 });
+      attDataArray.push({ dateStr: localDateStr, name: days[d.getDay()], Present: 0, Late: 0, Absent: 0, details: [] });
     }
-  } else if (selectedLeaveTimeFilter === '30DAYS') {
+  } else if (selectedAttTimeFilter === '30DAYS') {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      leaveDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Approved: 0, Pending: 0, Rejected: 0 });
+      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
     }
-  } else if (selectedLeaveTimeFilter === 'THIS_MONTH') {
+  } else if (selectedAttTimeFilter === '90DAYS') {
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
+    }
+  } else if (selectedAttTimeFilter === 'THIS_MONTH') {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     for (let i = 1; i <= today.getDate(); i++) {
       const d = new Date(currentYear, currentMonth, i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      leaveDataArray.push({ dateStr: localDateStr, name: `${i} ${d.toLocaleString('default', { month: 'short' })}`, Approved: 0, Pending: 0, Rejected: 0 });
+      attDataArray.push({ dateStr: localDateStr, name: `${i} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
     }
   }
 
-  filteredLeavesForChart.forEach(leave => {
-    if (!leave.start_date) return;
-    const leaveDate = leave.start_date.split('T')[0];
-    const dayObj = leaveDataArray.find(d => d.dateStr === leaveDate);
+  filteredAttForChart.forEach(att => {
+    if (!att.date) return;
+    const attDate = att.date;
+    const dayObj = attDataArray.find(d => d.dateStr === attDate);
     if (dayObj) {
-      if (leave.status === 'Approved') dayObj.Approved += 1;
-      else if (leave.status === 'Pending') dayObj.Pending += 1;
-      else if (leave.status === 'Rejected') dayObj.Rejected += 1;
+      if (att.status === 'Present') dayObj.Present += 1;
+      else if (att.status === 'Late') dayObj.Late += 1;
+      else if (att.status === 'Absent') dayObj.Absent += 1;
+      else dayObj.Present += 1;
+      
+      const empName = att.employees ? att.employees.name : 'Unknown';
+      dayObj.details.push({ name: empName, status: att.status || 'Present' });
     }
   });
 
@@ -513,20 +522,21 @@ const Dashboard = () => {
 
         <div className="card chart-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <h3 style={{ margin: 0 }}>Leave Statistics</h3>
+            <h3 style={{ margin: 0 }}>Attendance Statistics</h3>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <select 
-                value={selectedLeaveTimeFilter} 
-                onChange={(e) => setSelectedLeaveTimeFilter(e.target.value)}
+                value={selectedAttTimeFilter} 
+                onChange={(e) => setSelectedAttTimeFilter(e.target.value)}
                 style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.8rem', borderRadius: '6px', outline: 'none', cursor: 'pointer' }}
               >
                 <option value="7DAYS">Last 7 Days</option>
                 <option value="30DAYS">Last 30 Days</option>
+                <option value="90DAYS">Last 90 Days</option>
                 <option value="THIS_MONTH">This Month</option>
               </select>
               <select 
-                value={selectedLeaveEmpFilter} 
-                onChange={(e) => setSelectedLeaveEmpFilter(e.target.value)}
+                value={selectedAttEmpFilter} 
+                onChange={(e) => setSelectedAttEmpFilter(e.target.value)}
                 style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.8rem', borderRadius: '6px', outline: 'none', cursor: 'pointer' }}
               >
                 <option value="ALL">All Employees</option>
@@ -539,14 +549,21 @@ const Dashboard = () => {
           
           <div style={{ width: '100%', height: 300, minWidth: 0 }}>
             <ResponsiveContainer>
-              <BarChart data={leaveDataArray} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={attDataArray} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} onClick={(e) => {
+                if (e && e.activePayload && e.activePayload.length > 0) {
+                  setSelectedAttDay(e.activePayload[0].payload);
+                } else if (e && e.activeLabel) {
+                  const dayData = attDataArray.find(d => d.name === e.activeLabel);
+                  if (dayData) setSelectedAttDay(dayData);
+                }
+              }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                 <XAxis dataKey="name" stroke="var(--text-secondary)" />
                 <YAxis stroke="var(--text-secondary)" allowDecimals={false} />
                 <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}/>
-                <Bar dataKey="Approved" stackId="a" fill="var(--success)" barSize={24} />
-                <Bar dataKey="Pending" stackId="a" fill="var(--warning)" />
-                <Bar dataKey="Rejected" stackId="a" fill="var(--danger)" />
+                <Bar dataKey="Present" stackId="a" fill="var(--success)" barSize={24} style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
+                <Bar dataKey="Late" stackId="a" fill="var(--warning)" style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
+                <Bar dataKey="Absent" stackId="a" fill="var(--danger)" style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -593,8 +610,34 @@ const Dashboard = () => {
       {dashboardProjectModalId && (
         <ProjectDetailsModal 
           projectId={dashboardProjectModalId} 
-          onClose={() => setDashboardProjectModalId(null)} 
+          onClose={() => setDashboardProjectModalId(null)}
+          onProjectUpdate={() => {}}
         />
+      )}
+
+      {selectedAttDay && (
+        <div className="modal-overlay">
+          <div className="modal-content glass" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Attendance for {selectedAttDay.name}</h3>
+              <button className="close-btn" onClick={() => setSelectedAttDay(null)}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {selectedAttDay.details.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)' }}>No attendance records found.</p>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {selectedAttDay.details.map((d, i) => (
+                    <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)' }}>
+                      <span>{d.name}</span>
+                      <span className={`status-badge status-${d.status.toLowerCase()}`}>{d.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

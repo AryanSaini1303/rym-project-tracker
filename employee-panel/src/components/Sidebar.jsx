@@ -114,6 +114,7 @@ const Sidebar = ({ isOpen, onClose, onDotChange }) => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="nav-icon" /> },
+    { name: 'Projects', path: '/projects', icon: <Briefcase className="nav-icon" /> },
     { name: 'My Tasks', path: '/tasks', icon: <CheckSquare className="nav-icon" /> },
     { name: 'My Meetings', path: '/meetings', icon: <Briefcase className="nav-icon" /> },
     { name: 'Leave Requests', path: '/leaves', icon: <CalendarDays className="nav-icon" /> },

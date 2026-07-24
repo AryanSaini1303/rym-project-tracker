@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Meetings from './pages/Meetings';
 import Performance from './pages/Performance';
 import Settings from './pages/Settings';
+import Projects from './pages/Projects';
 import VideoCall from './pages/VideoCall';
 import RegistrationModal from './components/RegistrationModal';
 import { supabase } from './lib/supabaseClient';
@@ -203,6 +204,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/leaves" element={<Leaves />} />
             <Route path="/meetings" element={<Meetings />} />

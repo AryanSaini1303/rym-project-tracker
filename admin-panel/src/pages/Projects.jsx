@@ -302,19 +302,14 @@ const Projects = () => {
   useEffect(() => {
     fetchProjectsData();
 
-    // Listen for realtime updates from both the tasks and task_assignees tables
-    const tasksSubscription = supabaseAdmin
-      .channel('public:tasks_and_assignees')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
-        fetchProjectsData(); // Refresh the data instantly
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, (payload) => {
-        fetchProjectsData(); // Refresh instantly when individual status changes
-      })
-      .subscribe();
+    const handleUpdate = () => {
+      fetchProjectsData();
+    };
+
+    window.addEventListener('supabase_realtime_update', handleUpdate);
 
     return () => {
-      supabaseAdmin.removeChannel(tasksSubscription);
+      window.removeEventListener('supabase_realtime_update', handleUpdate);
     };
   }, []);
 
@@ -1031,7 +1026,6 @@ const Projects = () => {
                 <label>Due Date</label>
                 <input 
                   type="date" 
-                  min={new Date().toISOString().split('T')[0]}
                   value={newTask.dueDate}
                   onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
                   className="form-input"
