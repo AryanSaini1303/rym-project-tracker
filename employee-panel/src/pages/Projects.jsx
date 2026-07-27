@@ -52,7 +52,8 @@ const Projects = () => {
         due_date,
         task_assignees (
           employee_id,
-          status
+          status,
+          progress_percentage
         )
       `)
       .not('project_id', 'is', null);
@@ -91,7 +92,8 @@ const Projects = () => {
           hasEmployeeTasks = true;
           employeeTasks.push({
             ...t,
-            myStatus: empAssigneeInfo.status || 'todo'
+            myStatus: empAssigneeInfo.status || 'todo',
+            myProgress: empAssigneeInfo.progress_percentage || 0
           });
 
           if (empAssigneeInfo.status === 'todo' || empAssigneeInfo.status === 'inprogress' || empAssigneeInfo.status === 'in-progress' || empAssigneeInfo.status === 'review') {
@@ -250,8 +252,50 @@ const Projects = () => {
       }
       // Re-fetch everything to update overall progress and statuses correctly
       fetchData();
+      
+      // Update local modal state immediately
+      setSelectedProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          employeeTasks: prev.employeeTasks.map(t => 
+            t.id === taskId ? { ...t, myStatus: newStatus } : t
+          )
+        };
+      });
     } else {
       toast.error('Error updating task status: ' + error.message);
+    }
+  };
+
+  const handleProgressChangeLocal = (taskId, newValue) => {
+    setSelectedProject(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        employeeTasks: prev.employeeTasks.map(t => 
+          t.id === taskId ? { ...t, myProgress: parseInt(newValue, 10) } : t
+        )
+      };
+    });
+  };
+
+  const handleProgressSubmit = async (taskId, newValue) => {
+    const val = parseInt(newValue, 10);
+    const { error } = await supabase
+      .from('task_assignees')
+      .update({ progress_percentage: val })
+      .eq('task_id', taskId)
+      .eq('employee_id', employee.id);
+
+    if (error) {
+      toast.error('Error updating progress: ' + error.message);
+    } else {
+      if (val === 100) {
+        handleStatusChange(taskId, 'review');
+      } else {
+        fetchData();
+      }
     }
   };
 
@@ -383,7 +427,7 @@ const Projects = () => {
                   {selectedProject.description}
                 </p>
               </div>
-              <button className="close-btn" onClick={() => setSelectedProject(null)}><X size={24} /></button>
+              <button className="close-btn" onClick={() => setSelectedProject(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}><X size={24} color="white" /></button>
             </div>
 
             <div className="modal-body" style={{ marginTop: '1.5rem' }}>
@@ -401,21 +445,22 @@ const Projects = () => {
               ) : (
                 <div className="tasks-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
                   {selectedProject.employeeTasks.map(task => (
-                    <div key={task.id} className="task-item glass" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderRadius: '8px' }}>
-                      <div>
-                        <h4 style={{ margin: 0, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>{task.title}</h4>
-                        {task.description && (
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{task.description}</p>
-                        )}
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          {task.due_date && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <Clock size={12} /> Due: {new Date(task.due_date).toLocaleDateString()}
-                            </span>
+                    <div key={task.id} className="task-item glass" style={{ display: 'flex', flexDirection: 'column', padding: '1rem', borderRadius: '8px', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                        <div>
+                          <h4 style={{ margin: 0, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>{task.title}</h4>
+                          {task.description && (
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{task.description}</p>
                           )}
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {task.due_date && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Clock size={12} /> Due: {new Date(task.due_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <select 
                           className="status-select" 
                           value={task.myStatus}
@@ -437,7 +482,28 @@ const Projects = () => {
                           <option value="review" style={{ color: 'var(--text-primary)', background: 'var(--bg-color)' }}>REVIEW</option>
                           <option value="done" style={{ color: 'var(--text-primary)', background: 'var(--bg-color)' }}>DONE</option>
                         </select>
+                        </div>
                       </div>
+                      
+                      {task.myStatus === 'inprogress' && (
+                        <div style={{ width: '100%', marginTop: '1rem', flexBasis: '100%' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                            <span>Task Progress</span>
+                            <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{task.myProgress || 0}%</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            step="5"
+                            value={task.myProgress || 0}
+                            onChange={(e) => handleProgressChangeLocal(task.id, e.target.value)}
+                            onMouseUp={(e) => handleProgressSubmit(task.id, e.target.value)}
+                            onTouchEnd={(e) => handleProgressSubmit(task.id, e.target.value)}
+                            style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -453,7 +519,7 @@ const Projects = () => {
           <div className="modal-content glass" style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <h2 className="modal-title">Add Task to {selectedProject?.title}</h2>
-              <button className="close-btn" onClick={() => setShowTaskModal(false)}><X size={24} /></button>
+              <button className="close-btn" onClick={() => setShowTaskModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}><X size={24} color="white" /></button>
             </div>
             <form onSubmit={handleCreateTask}>
               <div className="form-group-modal">

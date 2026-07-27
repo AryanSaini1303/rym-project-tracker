@@ -57,6 +57,11 @@
   color: var(--danger);
 }
 
+.status-inactive {
+  background-color: rgba(107, 114, 128, 0.1);
+  color: #9CA3AF;
+}
+
 .location-modal-overlay {
   position: fixed;
   top: 0;

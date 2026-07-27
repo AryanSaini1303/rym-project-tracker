@@ -24,17 +24,22 @@ const Dashboard = () => {
 
   // Attendance Chart state
   const [rawAttendanceList, setRawAttendanceList] = useState([]);
+  const [rawLeavesList, setRawLeavesList] = useState([]);
   const [selectedAttEmpFilter, setSelectedAttEmpFilter] = useState('ALL');
   const [selectedAttTimeFilter, setSelectedAttTimeFilter] = useState('30DAYS');
 
   useEffect(() => {
     async function loadDashboardData() {
       // 1. Get total employees count
-      const { data: empData, count: employeeCount } = await supabase
+      const { data: empData } = await supabase
         .from('employees')
-        .select('id, name', { count: 'exact' });
+        .select('id, name, role');
         
-      if (empData) setEmployeesList(empData);
+      if (empData) {
+        const nonAdmins = empData.filter(emp => emp.role !== 'Admin' && emp.role !== 'Management');
+        setEmployeesList(nonAdmins);
+        setStats(prev => ({ ...prev, totalEmployees: nonAdmins.length }));
+      }
 
       // Fetch Projects
       const { data: projData } = await supabase
@@ -100,16 +105,22 @@ const Dashboard = () => {
         .lte('start_date', todayStr)
         .gte('end_date', todayStr);
 
-      setStats({
-        totalEmployees: employeeCount || 0,
+      setStats(prev => ({
+        ...prev,
         completionRate: completionRateVal,
         pendingTasks: pendingTasksCount,
         onLeaveToday: approvedLeavesCount || 0
-      });
+      }));
 
       // Fetch raw attendance for dynamic chart filtering
       const { data: allAttendance } = await supabase.from('attendance').select('employee_id, status, date, employees:employee_id(name)');
       setRawAttendanceList(allAttendance || []);
+
+      const { data: allLeaves } = await supabase
+        .from('leaves')
+        .select('employee_id, start_date, end_date, status, employees:employee_id(name)')
+        .eq('status', 'Approved');
+      setRawLeavesList(allLeaves || []);
 
       // 4. Fetch latest activities
       const feed = [];
@@ -325,21 +336,21 @@ const Dashboard = () => {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      attDataArray.push({ dateStr: localDateStr, name: days[d.getDay()], Present: 0, Late: 0, Absent: 0, details: [] });
+      attDataArray.push({ dateStr: localDateStr, name: days[d.getDay()], Present: 0, Late: 0, Absent: 0, Inactive: 0, details: [] });
     }
   } else if (selectedAttTimeFilter === '30DAYS') {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
+      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, Inactive: 0, details: [] });
     }
   } else if (selectedAttTimeFilter === '90DAYS') {
     for (let i = 89; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
+      attDataArray.push({ dateStr: localDateStr, name: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, Inactive: 0, details: [] });
     }
   } else if (selectedAttTimeFilter === 'THIS_MONTH') {
     const today = new Date();
@@ -348,7 +359,7 @@ const Dashboard = () => {
     for (let i = 1; i <= today.getDate(); i++) {
       const d = new Date(currentYear, currentMonth, i);
       const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      attDataArray.push({ dateStr: localDateStr, name: `${i} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, details: [] });
+      attDataArray.push({ dateStr: localDateStr, name: `${i} ${d.toLocaleString('default', { month: 'short' })}`, Present: 0, Late: 0, Absent: 0, Inactive: 0, details: [] });
     }
   }
 
@@ -363,8 +374,44 @@ const Dashboard = () => {
       else dayObj.Present += 1;
       
       const empName = att.employees ? att.employees.name : 'Unknown';
-      dayObj.details.push({ name: empName, status: att.status || 'Present' });
+      dayObj.details.push({ empId: att.employee_id, name: empName, status: att.status || 'Present' });
     }
+  });
+
+  // Calculate Leaves and Missing dynamically
+  attDataArray.forEach(dayObj => {
+    const attendedEmpIds = dayObj.details.map(d => d.empId);
+    
+    // 1. Process Approved Leaves (Absent)
+    rawLeavesList.forEach(leave => {
+      if (selectedAttEmpFilter !== 'ALL' && leave.employee_id !== selectedAttEmpFilter) return;
+      
+      if (dayObj.dateStr >= leave.start_date && dayObj.dateStr <= leave.end_date) {
+        if (!attendedEmpIds.includes(leave.employee_id)) {
+          dayObj.Absent += 1;
+          dayObj.details.push({ empId: leave.employee_id, name: leave.employees?.name || 'Unknown', status: 'Absent (On Leave)' });
+          attendedEmpIds.push(leave.employee_id);
+        }
+      }
+    });
+
+    // 2. Process Inactive (Missing)
+    const activeEmployees = employeesList.filter(e => {
+      if (selectedAttEmpFilter !== 'ALL' && e.id !== selectedAttEmpFilter) return false;
+      return true;
+    });
+
+    activeEmployees.forEach(emp => {
+      if (!attendedEmpIds.includes(emp.id)) {
+        // Only mark Inactive if the date is not in the future
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (dayObj.dateStr <= todayStr) {
+          dayObj.Inactive += 1;
+          dayObj.details.push({ empId: emp.id, name: emp.name, status: 'Inactive (Missing)' });
+          attendedEmpIds.push(emp.id);
+        }
+      }
+    });
   });
 
   return (
@@ -567,6 +614,7 @@ const Dashboard = () => {
                 <Bar dataKey="Present" stackId="a" fill="var(--success)" barSize={24} style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
                 <Bar dataKey="Late" stackId="a" fill="var(--warning)" style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
                 <Bar dataKey="Absent" stackId="a" fill="var(--danger)" style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
+                <Bar dataKey="Inactive" stackId="a" fill="#9CA3AF" fillOpacity={0.15} stroke="#9CA3AF" strokeOpacity={0.3} style={{ cursor: 'pointer' }} onClick={(data) => data?.payload && setSelectedAttDay(data.payload)} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -633,7 +681,7 @@ const Dashboard = () => {
                   {selectedAttDay.details.map((d, i) => (
                     <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)' }}>
                       <span>{d.name}</span>
-                      <span className={`status-badge status-${d.status.toLowerCase()}`}>{d.status}</span>
+                      <span className={`status-badge status-${d.status.split(' ')[0].toLowerCase()}`}>{d.status}</span>
                     </li>
                   ))}
                 </ul>

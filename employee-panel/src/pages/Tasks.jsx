@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Calendar, Search, Loader2, ChevronDown, ChevronRight, AlertCircle, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { triggerPushNotification } from '../lib/push';
+import './Tasks.css';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -176,7 +177,8 @@ const Tasks = () => {
         ),
         task_assignees (
           employee_id,
-          status
+          status,
+          progress_percentage
         )
       `)
       .order('created_at', { ascending: false });
@@ -203,7 +205,8 @@ const Tasks = () => {
         due_date: t.due_date,
         points_awarded: t.points_awarded,
         projectName: t.projects?.title,
-        completed_at: t.completed_at
+        completed_at: t.completed_at,
+        progress: t.task_assignees ? t.task_assignees.find(ta => ta.employee_id === empData.id)?.progress_percentage || 0 : 0
       }));
       setTasks(formatted);
     }
@@ -273,6 +276,29 @@ const Tasks = () => {
       }
     } else {
       toast.error('Error updating task status: ' + error.message);
+    }
+  };
+
+  const handleProgressChangeLocal = (taskId, newValue) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, progress: parseInt(newValue, 10) } : t
+    ));
+  };
+
+  const handleProgressSubmit = async (taskId, newValue) => {
+    const val = parseInt(newValue, 10);
+    const { error } = await supabase
+      .from('task_assignees')
+      .update({ progress_percentage: val })
+      .eq('task_id', taskId)
+      .eq('employee_id', employee.id);
+
+    if (error) {
+      toast.error('Error updating progress: ' + error.message);
+    } else {
+      if (val === 100) {
+        handleStatusChange(taskId, 'review');
+      }
     }
   };
 
@@ -386,6 +412,26 @@ const Tasks = () => {
                               <option value="done">Done</option>
                             </select>
                           </div>
+
+                          {(task.status === 'inprogress' || task.status === 'in-progress') && (
+                            <div style={{ width: '100%', marginBottom: '1rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                                <span>Task Progress</span>
+                                <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{task.progress || 0}%</span>
+                              </div>
+                              <input 
+                                type="range" 
+                                min="0" 
+                                max="100" 
+                                step="5"
+                                value={task.progress || 0}
+                                onChange={(e) => handleProgressChangeLocal(task.id, e.target.value)}
+                                onMouseUp={(e) => handleProgressSubmit(task.id, e.target.value)}
+                                onTouchEnd={(e) => handleProgressSubmit(task.id, e.target.value)}
+                                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                              />
+                            </div>
+                          )}
 
                           <div className="task-footer">
                             {(() => {

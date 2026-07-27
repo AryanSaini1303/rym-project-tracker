@@ -84,6 +84,19 @@
   border-radius: 50%;
 }
 
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
 /* ─── Mobile Responsive ─── */
 @media (max-width: 768px) {
   .kanban-board {

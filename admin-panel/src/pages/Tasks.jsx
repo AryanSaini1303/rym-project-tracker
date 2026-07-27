@@ -4,7 +4,7 @@ import { Plus, Calendar, Search, X, Edit, Trash, ChevronDown, ChevronRight, Aler
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabaseClient';
 import { triggerPushNotification } from '../lib/push';
-
+import './Tasks.css';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -64,6 +64,7 @@ const Tasks = () => {
         *,
         task_assignees (
           status,
+          progress_percentage,
           employees (
             id,
             name
@@ -349,8 +350,8 @@ const Tasks = () => {
             return t.project_id === sec.key && matchesSearch && matchesEmp;
           });
 
-          // Only render projects that have tasks OR show all projects if no search term is active
-          if (secTasks.length === 0 && searchTerm) return null;
+          // Only render projects that have tasks OR show all projects if no filters are active
+          if (secTasks.length === 0 && (searchTerm || selectedEmployeeFilter !== 'ALL')) return null;
 
           const isExpanded = expandedSections[sec.key] !== false;
 
@@ -444,7 +445,7 @@ const Tasks = () => {
                                       <div className="avatars-stack" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
                                         {task.task_assignees.map((ta) => {
                                           const normalizedStatus = ta.status ? ta.status.replace('-', '') : 'todo';
-                                          const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? 50 : 0;
+                                          const percent = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 100 : normalizedStatus === 'review' ? 75 : normalizedStatus === 'inprogress' ? (ta.progress_percentage || 0) : 0;
                                           const color = normalizedStatus === 'done' || normalizedStatus === 'completed' ? 'var(--success)' : normalizedStatus === 'review' ? 'var(--warning)' : normalizedStatus === 'inprogress' ? '#3182ce' : 'var(--text-secondary)';
                                           return (
                                             <div key={ta.employees.id} style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', gap: '8px', flex: 1, minWidth: '140px' }}>

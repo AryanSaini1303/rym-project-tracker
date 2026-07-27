@@ -352,19 +352,36 @@ const Employees = () => {
 
               <div className="form-group-modal">
                 <label>Department</label>
-                <input
-                  type="text"
-                  className="modal-input"
-                  list="department-options"
-                  placeholder="Select or type a custom department..."
-                  value={formDept}
-                  onChange={(e) => setFormDept(e.target.value)}
-                />
-                <datalist id="department-options">
-                  {Array.from(new Set(employees.map(e => e.department).filter(Boolean))).map(d => (
-                    <option key={d} value={d} />
-                  ))}
-                </datalist>
+                <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                  <select
+                    className="modal-input"
+                    value={employees.some(e => e.department === formDept) ? formDept : (formDept === '' ? '' : 'Custom')}
+                    onChange={(e) => {
+                      if (e.target.value !== 'Custom') {
+                        setFormDept(e.target.value);
+                      } else {
+                        setFormDept('New Department'); 
+                      }
+                    }}
+                  >
+                    <option value="" disabled>Select Department...</option>
+                    {Array.from(new Set(employees.map(e => e.department).filter(Boolean))).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                    <option value="Custom">+ Add New Department...</option>
+                  </select>
+                  
+                  {(!employees.some(e => e.department === formDept) && formDept !== '') && (
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="Type custom department..."
+                      value={formDept === 'New Department' ? '' : formDept}
+                      onChange={(e) => setFormDept(e.target.value)}
+                      autoFocus
+                    />
+                  )}
+                </div>
               </div>
 
               <div className="form-group-modal">
