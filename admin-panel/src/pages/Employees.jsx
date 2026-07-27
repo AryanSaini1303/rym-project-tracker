@@ -251,7 +251,7 @@ const Employees = () => {
             onChange={(e) => setDeptFilter(e.target.value)}
           >
             <option value="All">All Departments</option>
-            {Array.from(new Set(employees.map(item => item.department).filter(Boolean))).map(dept => (
+            {Array.from(new Set([...['Engineering', 'Design', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Management', 'Product'], ...employees.map(e => e.department).filter(Boolean)])).sort().map(dept => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
@@ -365,7 +365,7 @@ const Employees = () => {
                     }}
                   >
                     <option value="" disabled>Select Department...</option>
-                    {Array.from(new Set(employees.map(e => e.department).filter(Boolean))).map(d => (
+                    {Array.from(new Set([...['Engineering', 'Design', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Management', 'Product'], ...employees.map(e => e.department).filter(Boolean)])).sort().map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                     <option value="Custom">+ Add New Department...</option>

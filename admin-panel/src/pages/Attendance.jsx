@@ -1,39 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, CheckCircle, Clock, XCircle, Calendar, RefreshCw } from 'lucide-react';
+import { Search, CheckCircle, Clock, XCircle, Calendar, RefreshCw, MinusCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
 const Attendance = () => {
   const [records, setRecords] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState(() => new Date().toISOString().split('T')[0]);
-  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const fetchAttendance = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('attendance')
-      .select(`
-        id,
-        date,
-        clock_in,
-        clock_out,
-        status,
-        lat,
-        lng,
-        address,
-        notes,
-        employees:employee_id (
-          name,
-          email
-        )
-      `)
-      .order('clock_in', { ascending: false });
+    
+    const [{ data, error }, { data: empData, error: empError }] = await Promise.all([
+      supabase
+        .from('attendance')
+        .select(`
+          id,
+          employee_id,
+          date,
+          clock_in,
+          clock_out,
+          status,
+          lat,
+          lng,
+          address,
+          notes,
+          employees:employee_id (
+            name,
+            email
+          )
+        `)
+        .order('clock_in', { ascending: false }),
+      supabase.from('employees').select('id, name, email')
+    ]);
+
+    if (!empError && empData) {
+      setAllEmployees(empData);
+    }
 
     if (!error && data) {
       const formatted = data.map(row => ({
         id: row.id,
+        empId: row.employee_id,
         name: row.employees?.name || 'Unknown',
         email: row.employees?.email || 'N/A',
         date: row.date,
@@ -63,17 +73,38 @@ const Attendance = () => {
 
 
   // Filter handlers
-  const filteredRecords = records.filter(rec => {
+  const recordsForDate = records.filter(rec => rec.date === dateFilter);
+  const presentEmpIds = new Set(recordsForDate.map(r => r.empId));
+
+  const inactiveRecords = allEmployees
+    .filter(emp => !presentEmpIds.has(emp.id))
+    .map(emp => ({
+      id: `inactive-${emp.id}-${dateFilter}`,
+      empId: emp.id,
+      name: emp.name,
+      email: emp.email,
+      date: dateFilter,
+      clockIn: '--',
+      clockOut: '--',
+      status: 'Inactive',
+      lat: 0,
+      lng: 0,
+      address: 'N/A'
+    }));
+
+  const combinedRecords = [...recordsForDate, ...inactiveRecords];
+
+  const filteredRecords = combinedRecords.filter(rec => {
     const matchesSearch = rec.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           rec.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || rec.status === statusFilter;
-    const matchesDate = rec.date === dateFilter;
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus;
   });
 
   const presentCount = filteredRecords.filter(r => r.status === 'Present').length;
   const lateCount = filteredRecords.filter(r => r.status === 'Late').length;
   const absentCount = filteredRecords.filter(r => r.status === 'Absent').length;
+  const inactiveCount = filteredRecords.filter(r => r.status === 'Inactive').length;
 
   return (
     <div>
@@ -125,6 +156,16 @@ const Attendance = () => {
             <span className="stat-value">{absentCount}</span>
           </div>
         </div>
+
+        <div className="card stat-card">
+          <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(158, 158, 158, 0.1)', color: 'var(--text-secondary)' }}>
+            <MinusCircle size={28} />
+          </div>
+          <div className="stat-info">
+            <span className="stat-title">Inactive</span>
+            <span className="stat-value">{inactiveCount}</span>
+          </div>
+        </div>
       </div>
 
       {/* Filter and Control Bar */}
@@ -173,13 +214,12 @@ const Attendance = () => {
                 <th>Clock In</th>
                 <th>Clock Out</th>
                 <th>Status</th>
-                <th>Location Coordinate</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                     Loading attendance logs...
                   </td>
                 </tr>
@@ -203,24 +243,11 @@ const Attendance = () => {
                         {rec.status}
                       </span>
                     </td>
-                    <td>
-                      {rec.status !== 'Absent' ? (
-                        <button 
-                          className="btn-primary flex items-center gap-1" 
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                          onClick={() => setSelectedRecord(rec)}
-                        >
-                          <MapPin size={14} /> Map Location
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Location unavailable</span>
-                      )}
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                     No attendance logs match the filters.
                   </td>
                 </tr>
@@ -230,38 +257,7 @@ const Attendance = () => {
         </div>
       </div>
 
-      {/* Location Modal */}
-      {selectedRecord && (
-        <div className="location-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedRecord(null); }}>
-          <div className="location-modal glass" onMouseDown={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0 }}>Check-in Location</h3>
-              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRecord(null); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedRecord(null); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
-            </div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Employee: <strong>{selectedRecord.name}</strong>
-            </p>
-            
-            <div className="mock-map">
-              <div className="map-marker">
-                <MapPin size={32} fill="var(--danger)" />
-                <span>Checked In Here</span>
-              </div>
-            </div>
-
-            <div style={{ fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.4' }}>
-              <div><strong>Address:</strong> {selectedRecord.address}</div>
-              <div style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                <strong>Coordinates:</strong> {selectedRecord.lat}, {selectedRecord.lng}
-              </div>
-            </div>
-
-            <button className="btn-close" onClick={() => setSelectedRecord(null)}>
-              Close Location Details
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Location Modal Removed */}
     </div>
   );
 };
