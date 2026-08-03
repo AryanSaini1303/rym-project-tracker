@@ -541,8 +541,8 @@ const Dashboard = () => {
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                    <linearGradient id="colorTodo" x1="0" y1="0" x2="0" y2="1">
-                     <stop offset="5%" stopColor="var(--text-secondary)" stopOpacity={0.8}/>
-                     <stop offset="95%" stopColor="var(--text-secondary)" stopOpacity={0.1}/>
+                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
                    </linearGradient>
                    <linearGradient id="colorInprogress" x1="0" y1="0" x2="0" y2="1">
                      <stop offset="5%" stopColor="#3182ce" stopOpacity={0.8}/>
@@ -561,7 +561,7 @@ const Dashboard = () => {
                 <XAxis dataKey="name" stroke="var(--text-secondary)" />
                 <YAxis stroke="var(--text-secondary)" allowDecimals={false} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} />
-                <Area type="monotone" dataKey="todo" name="To Do" stroke="var(--text-secondary)" fillOpacity={1} fill="url(#colorTodo)" stackId="1" />
+                <Area type="monotone" dataKey="todo" name="To Do" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorTodo)" stackId="1" />
                 <Area type="monotone" dataKey="inprogress" name="In Progress" stroke="#3182ce" fillOpacity={1} fill="url(#colorInprogress)" stackId="1" />
                 <Area type="monotone" dataKey="review" name="In Review" stroke="var(--warning)" fillOpacity={1} fill="url(#colorReview)" stackId="1" />
                 <Area type="monotone" dataKey="done" name="Completed" stroke="var(--success)" fillOpacity={1} fill="url(#colorDone)" stackId="1" />
@@ -671,7 +671,7 @@ const Dashboard = () => {
           <div className="modal-content glass" style={{ maxWidth: '400px' }}>
             <div className="modal-header">
               <h3>Attendance for {selectedAttDay.name}</h3>
-              <button className="close-btn" onClick={() => setSelectedAttDay(null)} style={{ color: 'white', fontSize: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>&times;</button>
+              <button className="close-btn" onClick={() => setSelectedAttDay(null)} style={{ color: 'var(--danger)', fontSize: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>&times;</button>
             </div>
             <div className="modal-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
               {selectedAttDay.details.length === 0 ? (

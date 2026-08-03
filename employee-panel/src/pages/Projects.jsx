@@ -427,7 +427,7 @@ const Projects = () => {
                   {selectedProject.description}
                 </p>
               </div>
-              <button className="close-btn" onClick={() => setSelectedProject(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}><X size={24} color="white" /></button>
+              <button className="close-btn" onClick={() => setSelectedProject(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}><X size={24} color="var(--danger)" /></button>
             </div>
 
             <div className="modal-body" style={{ marginTop: '1.5rem' }}>
@@ -519,7 +519,7 @@ const Projects = () => {
           <div className="modal-content glass" style={{ maxWidth: '500px' }}>
             <div className="modal-header">
               <h2 className="modal-title">Add Task to {selectedProject?.title}</h2>
-              <button className="close-btn" onClick={() => setShowTaskModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'white' }}><X size={24} color="white" /></button>
+              <button className="close-btn" onClick={() => setShowTaskModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}><X size={24} color="var(--danger)" /></button>
             </div>
             <form onSubmit={handleCreateTask}>
               <div className="form-group-modal">

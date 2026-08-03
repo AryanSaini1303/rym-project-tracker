@@ -8,7 +8,7 @@
 .kanban-column {
   flex: 1;
   min-width: 300px;
-  background-color: rgba(13, 17, 27, 0.45);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 1.25rem;
@@ -74,16 +74,16 @@
   align-items: center;
   font-size: 0.8rem;
   color: var(--text-secondary);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border-color);
   padding-top: 0.75rem;
   margin-top: 0.5rem;
 }
 
 .filter-input {
-  background-color: rgba(26, 34, 51, 0.45);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 0.65rem 1rem;
   outline: none;
   font-family: inherit;

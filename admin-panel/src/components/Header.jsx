@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu, BellRing } from 'lucide-react';
+import { Search, Bell, CheckCircle2, User, Settings as SettingsIcon, Image as ImageIcon, LogOut, Menu, BellRing, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -23,6 +23,14 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
   const [notificationPermission, setNotificationPermission] = useState(
     'Notification' in window ? Notification.permission : 'default'
   );
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     async function getSessionUser() {
@@ -272,6 +280,10 @@ const Header = ({ onMenuToggle, hasSidebarDot }) => {
       
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         
+        <button className="icon-btn theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
+
         {notificationPermission !== 'granted' && (
           <button 
             onClick={requestManualPermission}

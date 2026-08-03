@@ -72,10 +72,10 @@
 }
 
 .modal-input {
-  background-color: rgba(26, 34, 51, 0.45);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
   outline: none;
@@ -104,7 +104,7 @@
 }
 
 .btn-cancel:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--hover-bg);
 }
 
 .table-container {
@@ -125,7 +125,7 @@
 }
 
 .data-table th {
-  background-color: rgba(13, 17, 27, 0.3);
+  background-color: var(--surface-color);
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -133,5 +133,5 @@
 }
 
 .data-table tr:hover {
-  background-color: rgba(255, 255, 255, 0.01);
+  background-color: var(--hover-bg);
 }

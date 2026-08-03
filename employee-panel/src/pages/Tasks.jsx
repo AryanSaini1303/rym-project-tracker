@@ -469,7 +469,7 @@ const Tasks = () => {
               <h3 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
                 <AlertCircle size={22} /> Missed Deadlines Record
               </h3>
-              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMissedModal(false); }} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             
             <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'auto', width: '100%', paddingRight: '4px' }}>
@@ -528,7 +528,7 @@ const Tasks = () => {
                 <h3 className="modal-title" style={{ margin: 0, fontSize: '1.25rem', color: '#fff' }}>Add Verbal / Self Task</h3>
                 <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Create a task related to an ongoing project or general assignment.</p>
               </div>
-              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAddTaskModal(false); }} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleCreateSelfTask}>
