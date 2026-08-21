@@ -3,22 +3,23 @@ import { Search, Calendar, Video, X, ExternalLink, Copy, Trash2, Users, Clock } 
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase, supabaseAdmin } from '../lib/supabaseClient';
+import emailjs from '@emailjs/browser';
 import { triggerPushNotification } from '../lib/push';
 
 const Meetings = () => {
   const [videoCalls, setVideoCalls] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [selectedEmpIds, setSelectedEmpIds] = useState([]);
   const [isStartingCall, setIsStartingCall] = useState(false);
-  
+
   const [expandedCallId, setExpandedCallId] = useState(null);
   const [participantsData, setParticipantsData] = useState({});
-  
+
   // Scheduling State
   const [callType, setCallType] = useState('instant'); // 'instant' or 'scheduled'
   const [scheduledDate, setScheduledDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -73,77 +74,84 @@ const Meetings = () => {
   const handleStartVideoCall = async (e) => {
     e.preventDefault();
     if (selectedEmpIds.length === 0 && !externalEmails.trim()) return;
-    
+
     setIsStartingCall(true);
-    // Generate a random room name
-    const roomName = `RYM-Call-${Math.floor(Math.random() * 1000000)}`;
 
-    const { data: { user } } = await supabaseAdmin.auth.getUser();
+    try {
+      // Generate a random room name
+      const roomName = `RYM-Call-${Math.floor(Math.random() * 1000000)}`;
 
-    // Insert into video_calls table
-    await supabaseAdmin.from('video_calls').insert([{
-      admin_id: user?.id,
-      employee_id: selectedEmpIds.length > 0 ? selectedEmpIds[0] : null, // primary invitee
-      room_name: roomName,
-      status: callType === 'instant' ? 'active' : `scheduled for ${scheduledDate} ${scheduledTime}`
-    }]);
+      const { data: { user } } = await supabase.auth.getUser();
 
-    // Notify all selected employees
-    if (selectedEmpIds.length > 0) {
-      const notifications = selectedEmpIds.map(empId => ({
-        user_id: empId,
-        title: callType === 'instant' ? 'Incoming Video Call' : `Scheduled Video Call`,
-        message: callType === 'instant' 
-          ? 'The admin has invited you to a live video meeting.' 
-          : `A video meeting has been scheduled for ${scheduledDate} at ${scheduledTime}.`,
-        type: 'call',
-        link: `/video-call/${roomName}`
-      }));
-      
-      await supabaseAdmin.from('notifications').insert(notifications);
-      await triggerPushNotification(notifications);
-    }
+      // Insert into video_calls table
+      await supabaseAdmin.from('video_calls').insert([{
+        admin_id: user?.id,
+        employee_id: selectedEmpIds.length > 0 ? selectedEmpIds[0] : null, // primary invitee
+        room_name: roomName,
+        status: callType === 'instant' ? 'active' : `scheduled for ${scheduledDate} ${scheduledTime}`
+      }]);
 
-    setIsStartingCall(false);
-    fetchVideoCalls(); // Refresh table
-    
-    let emailSent = false;
-    if (externalEmails.trim()) {
-      try {
-        const mailerUrl = import.meta.env.VITE_MAILER_URL || 'http://localhost:4000';
-        const res = await fetch(`${mailerUrl}/api/send-invite`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: externalEmails.trim(),
-            link: `${window.location.origin}/join/${roomName}`,
-            date: scheduledDate,
-            time: scheduledTime,
-            type: callType
-          })
-        });
-        
-        if (res.ok) {
-          emailSent = true;
-          toast.success('Invitations sent to external guests automatically!');
-        } else {
-          toast.error('Failed to send automatic email. Ensure the mailer backend is running.');
-        }
-      } catch (err) {
-        console.error('Email error:', err);
-        toast.error('Failed to send automatic email. Ensure the mailer backend is running on port 4000.');
+      // Notify all selected employees
+      if (selectedEmpIds.length > 0) {
+        const notifications = selectedEmpIds.map(empId => ({
+          user_id: empId,
+          title: callType === 'instant' ? 'Incoming Video Call' : `Scheduled Video Call`,
+          message: callType === 'instant'
+            ? 'The admin has invited you to a live video meeting.'
+            : `A video meeting has been scheduled for ${scheduledDate} at ${scheduledTime}.`,
+          type: 'call',
+          link: `/video-call/${roomName}`
+        }));
+
+        await supabaseAdmin.from('notifications').insert(notifications);
+        await triggerPushNotification(notifications);
       }
-    }
 
-    if (callType === 'instant' && !externalEmails.trim()) {
-      setShowVideoModal(false);
-      setSelectedEmpIds([]); // reset
-      setExternalEmails('');
-      navigate(`/video-call/${roomName}`);
-    } else {
-      // If scheduled or if there's an external email (even instant), show success screen
-      setCallTypeForSuccess(callType);
-      setGeneratedLink(`${window.location.origin}/video-call/${roomName}`);
+      setIsStartingCall(false);
+      fetchVideoCalls(); // Refresh table
+
+      let emailSent = false;
+      if (externalEmails.trim()) {
+        try {
+          const templateParams = {
+            to_email: externalEmails.trim(),
+            meeting_link: `${window.location.origin}/join/${roomName}`,
+            meeting_date: scheduledDate || 'Now',
+            meeting_time: scheduledTime || 'Now',
+            call_type: callType
+          };
+
+          // TODO: Replace 'YOUR_TEMPLATE_ID' once the user provides it
+          await emailjs.send(
+            'service_pvd3gkk',
+            'template_y2jmxjh',
+            templateParams,
+            'waYhVq5KRR9aC76yu'
+          );
+
+          emailSent = true;
+          toast.success('Invitations sent to external guests securely via EmailJS!');
+        } catch (err) {
+          console.error('Email error:', err);
+          toast.error('Failed to send email. Check EmailJS configuration.');
+        }
+      }
+
+      if (callType === 'instant' && !externalEmails.trim()) {
+        setShowVideoModal(false);
+        setSelectedEmpIds([]); // reset
+        setExternalEmails('');
+        navigate(`/video-call/${roomName}`);
+      } else {
+        // If scheduled or if there's an external email (even instant), show success screen
+        setCallTypeForSuccess(callType);
+        setGeneratedLink(`${window.location.origin}/video-call/${roomName}`);
+      }
+
+    } catch (error) {
+      console.error('Crash in handleStartVideoCall:', error);
+      toast.error('An error occurred while creating the meeting.');
+      setIsStartingCall(false);
     }
   };
 
@@ -159,7 +167,7 @@ const Meetings = () => {
               .from('video_calls')
               .delete()
               .eq('id', id);
-            
+
             if (!error) {
               setVideoCalls(videoCalls.filter(call => call.id !== id));
               toast.success('Meeting deleted successfully!');
@@ -185,16 +193,16 @@ const Meetings = () => {
       setExpandedCallId(null);
       return;
     }
-    
+
     setExpandedCallId(callId);
-    
+
     if (!participantsData[callId]) {
       const { data, error } = await supabaseAdmin
         .from('meeting_participants')
         .select('*')
         .eq('room_name', roomName)
         .order('joined_at', { ascending: true });
-        
+
       if (!error && data) {
         setParticipantsData(prev => ({ ...prev, [callId]: data }));
       }
@@ -203,8 +211,8 @@ const Meetings = () => {
 
   const filteredCalls = videoCalls.filter(call => {
     const empName = call.employees?.name || 'Unknown';
-    return empName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           call.room_name.toLowerCase().includes(searchTerm.toLowerCase());
+    return empName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      call.room_name.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -256,113 +264,113 @@ const Meetings = () => {
             ) : filteredCalls.length > 0 ? (
               filteredCalls.map((call) => (
                 <React.Fragment key={call.id}>
-                <tr>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={14} className="text-secondary" />
-                      {new Date(call.created_at).toLocaleString()}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="employee-cell">
-                      <img src={`https://ui-avatars.com/api/?name=${(call.employees?.name || 'Unknown').replace(' ', '+')}&background=random`} alt="Avatar" />
-                      <span style={{ fontWeight: 600 }}>{call.employees?.name || 'Unknown'}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontFamily: 'monospace', color: 'var(--primary)' }}>{call.room_name}</td>
-                  <td>
-                    <span className={`status-badge ${call.status?.includes('active') ? 'in-progress' : call.status?.includes('scheduled') ? 'pending' : 'completed'}`} style={{ textTransform: 'capitalize' }}>
-                      {call.status || 'Ended'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex gap-2">
-                      <button 
-                        className="btn-primary flex items-center gap-1"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                        onClick={() => navigate(`/video-call/${call.room_name}`)}
-                        title="Join Meeting"
-                      >
-                        <ExternalLink size={14} /> Join
-                      </button>
-                      <button 
-                        className="btn-secondary flex items-center gap-1"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
-                        onClick={() => {
-                          const externalLink = `${window.location.origin}/join/${call.room_name}`;
-                          navigator.clipboard.writeText(externalLink);
-                          toast.success('Secure meeting link copied! Share this with your client.');
-                        }}
-                        title="Copy External Meeting Link"
-                      >
-                        <Copy size={14} /> Copy Link
-                      </button>
-                      <button 
-                        className="btn-secondary flex items-center gap-1"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--primary)', background: 'rgba(0, 223, 162, 0.1)', color: 'var(--primary)' }}
-                        onClick={() => toggleParticipants(call.id, call.room_name)}
-                        title="View Participants"
-                      >
-                        <Users size={14} /> Participants
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteCall(call.id)} 
-                        style={{ background: 'none', border: 'none', color: 'var(--danger)', opacity: 0.8, cursor: 'pointer', marginLeft: '0.5rem' }} 
-                        title="Delete Meeting"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                {expandedCallId === call.id && (
                   <tr>
-                    <td colSpan="5" style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)' }}>
-                      <div style={{ marginLeft: '1rem' }}>
-                        <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Meeting Log</h4>
-                        {!participantsData[call.id] ? (
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading participants...</div>
-                        ) : participantsData[call.id].length === 0 ? (
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No participants have joined this meeting yet.</div>
-                        ) : (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
-                            <thead>
-                              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Participant</th>
-                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Joined At</th>
-                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Left At</th>
-                                <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Duration</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {participantsData[call.id].map(p => {
-                                let durationStr = '-';
-                                if (p.joined_at && p.left_at) {
-                                  const diffMs = new Date(p.left_at) - new Date(p.joined_at);
-                                  const diffMins = Math.round(diffMs / 60000);
-                                  durationStr = diffMins > 0 ? `${diffMins} min` : '< 1 min';
-                                } else if (p.joined_at) {
-                                  durationStr = 'Still in meeting';
-                                }
-                                
-                                return (
-                                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem' }}>{p.participant_name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>({p.participant_email})</span></td>
-                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: 'var(--success)' }}>{new Date(p.joined_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}</td>
-                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: p.left_at ? 'var(--danger)' : 'var(--text-secondary)' }}>{p.left_at ? new Date(p.left_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : 'Active'}</td>
-                                    <td style={{ padding: '0.5rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      <Clock size={12} /> {durationStr}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        )}
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-secondary" />
+                        {new Date(call.created_at).toLocaleString()}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="employee-cell">
+                        <img src={`https://ui-avatars.com/api/?name=${(call.employees?.name || 'Unknown').replace(' ', '+')}&background=random`} alt="Avatar" />
+                        <span style={{ fontWeight: 600 }}>{call.employees?.name || 'Unknown'}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--primary)' }}>{call.room_name}</td>
+                    <td>
+                      <span className={`status-badge ${call.status?.includes('active') ? 'in-progress' : call.status?.includes('scheduled') ? 'pending' : 'completed'}`} style={{ textTransform: 'capitalize' }}>
+                        {call.status || 'Ended'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button
+                          className="btn-primary flex items-center gap-1"
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                          onClick={() => navigate(`/video-call/${call.room_name}`)}
+                          title="Join Meeting"
+                        >
+                          <ExternalLink size={14} /> Join
+                        </button>
+                        <button
+                          className="btn-secondary flex items-center gap-1"
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
+                          onClick={() => {
+                            const externalLink = `${window.location.origin}/join/${call.room_name}`;
+                            navigator.clipboard.writeText(externalLink);
+                            toast.success('Secure meeting link copied! Share this with your client.');
+                          }}
+                          title="Copy External Meeting Link"
+                        >
+                          <Copy size={14} /> Copy Link
+                        </button>
+                        <button
+                          className="btn-secondary flex items-center gap-1"
+                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--primary)', background: 'rgba(0, 223, 162, 0.1)', color: 'var(--primary)' }}
+                          onClick={() => toggleParticipants(call.id, call.room_name)}
+                          title="View Participants"
+                        >
+                          <Users size={14} /> Participants
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCall(call.id)}
+                          style={{ background: 'none', border: 'none', color: 'var(--danger)', opacity: 0.8, cursor: 'pointer', marginLeft: '0.5rem' }}
+                          title="Delete Meeting"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
-                )}
+                  {expandedCallId === call.id && (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ marginLeft: '1rem' }}>
+                          <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users size={16} /> Meeting Log</h4>
+                          {!participantsData[call.id] ? (
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Loading participants...</div>
+                          ) : participantsData[call.id].length === 0 ? (
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>No participants have joined this meeting yet.</div>
+                          ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                  <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Participant</th>
+                                  <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Joined At</th>
+                                  <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Left At</th>
+                                  <th style={{ textAlign: 'left', padding: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Duration</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {participantsData[call.id].map(p => {
+                                  let durationStr = '-';
+                                  if (p.joined_at && p.left_at) {
+                                    const diffMs = new Date(p.left_at) - new Date(p.joined_at);
+                                    const diffMins = Math.round(diffMs / 60000);
+                                    durationStr = diffMins > 0 ? `${diffMins} min` : '< 1 min';
+                                  } else if (p.joined_at) {
+                                    durationStr = 'Still in meeting';
+                                  }
+
+                                  return (
+                                    <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <td style={{ padding: '0.5rem', fontSize: '0.85rem' }}>{p.participant_name} <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>({p.participant_email})</span></td>
+                                      <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: 'var(--success)' }}>{new Date(p.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
+                                      <td style={{ padding: '0.5rem', fontSize: '0.85rem', color: p.left_at ? 'var(--danger)' : 'var(--text-secondary)' }}>{p.left_at ? new Date(p.left_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Active'}</td>
+                                      <td style={{ padding: '0.5rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={12} /> {durationStr}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               ))
             ) : (
@@ -384,7 +392,7 @@ const Meetings = () => {
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Video size={20} className="text-primary" /> Start Video Call</h3>
               <button type="button" className="modal-close-btn" onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); resetModal(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); resetModal(); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            
+
             {generatedLink ? (
               <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
                 <h4 style={{ color: 'var(--success)', marginBottom: '1rem' }}>Meeting {callTypeForSuccess === 'instant' ? 'Created' : 'Scheduled'} Successfully!</h4>
@@ -394,8 +402,8 @@ const Meetings = () => {
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <input type="text" readOnly value={`${window.location.origin}/join/${generatedLink.split('/').pop()}`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--primary)', fontFamily: 'monospace', fontSize: '0.85rem', outline: 'none' }} />
-                  <button 
-                    className="btn-primary" 
+                  <button
+                    className="btn-primary"
                     style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
                     onClick={() => {
                       const externalLink = `${window.location.origin}/join/${generatedLink.split('/').pop()}`;
@@ -423,24 +431,24 @@ const Meetings = () => {
                 <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
                   Select an employee to start or schedule a video call.
                 </p>
-                
+
                 <form onSubmit={handleStartVideoCall}>
                   {/* Call Type Toggle */}
                   <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input 
-                        type="radio" 
-                        checked={callType === 'instant'} 
-                        onChange={() => setCallType('instant')} 
+                      <input
+                        type="radio"
+                        checked={callType === 'instant'}
+                        onChange={() => setCallType('instant')}
                         style={{ accentColor: 'var(--primary)' }}
                       />
                       <span>Start Instantly</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input 
-                        type="radio" 
-                        checked={callType === 'scheduled'} 
-                        onChange={() => setCallType('scheduled')} 
+                      <input
+                        type="radio"
+                        checked={callType === 'scheduled'}
+                        onChange={() => setCallType('scheduled')}
                         style={{ accentColor: 'var(--primary)' }}
                       />
                       <span>Schedule for Later</span>
@@ -464,12 +472,12 @@ const Meetings = () => {
                   {/* External Guests Input */}
                   <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>External Guests Email (Optional)</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="e.g. client@example.com, another@test.com" 
-                      value={externalEmails} 
-                      onChange={(e) => setExternalEmails(e.target.value)} 
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. client@example.com, another@test.com"
+                      value={externalEmails}
+                      onChange={(e) => setExternalEmails(e.target.value)}
                       style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-primary)' }}
                     />
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
@@ -479,45 +487,45 @@ const Meetings = () => {
 
                   <div style={{ marginBottom: '1.5rem' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Select Employees (Optional if external guest added)</label>
-                <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                  {employees.length === 0 ? (
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>No employees found.</div>
-                  ) : (
-                    employees.map(emp => (
-                      <label 
-                        key={emp.id} 
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.75rem', 
-                          padding: '0.75rem 1rem', 
-                          cursor: 'pointer', 
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                          transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={selectedEmpIds.includes(emp.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedEmpIds([...selectedEmpIds, emp.id]);
-                            } else {
-                              setSelectedEmpIds(selectedEmpIds.filter(id => id !== emp.id));
-                            }
-                          }}
-                          style={{ accentColor: 'var(--primary)', width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '0.95rem', fontWeight: selectedEmpIds.includes(emp.id) ? '600' : '400', color: selectedEmpIds.includes(emp.id) ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          {emp.name}
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                      {employees.length === 0 ? (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>No employees found.</div>
+                      ) : (
+                        employees.map(emp => (
+                          <label
+                            key={emp.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                              transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedEmpIds.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedEmpIds([...selectedEmpIds, emp.id]);
+                                } else {
+                                  setSelectedEmpIds(selectedEmpIds.filter(id => id !== emp.id));
+                                }
+                              }}
+                              style={{ accentColor: 'var(--primary)', width: '18px', height: '18px', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '0.95rem', fontWeight: selectedEmpIds.includes(emp.id) ? '600' : '400', color: selectedEmpIds.includes(emp.id) ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                              {emp.name}
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
 
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                     <button type="button" onClick={resetModal} className="btn-close" style={{ margin: 0, padding: '0.6rem 1rem' }}>Cancel</button>
