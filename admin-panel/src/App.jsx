@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import VideoCall from './pages/VideoCall';
 import Projects from './pages/Projects';
 import SharedProject from './pages/SharedProject';
+import JoinMeetingRedirect from './pages/JoinMeetingRedirect';
 import { supabase } from './lib/supabaseClient';
 
 const ALLOWED_ADMIN_EMAILS = import.meta.env.VITE_ALLOWED_ADMIN_EMAILS
@@ -32,6 +33,7 @@ function AppContent() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
   const isSharedProject = location.pathname.startsWith('/share/projects/');
+  const isJoinMeeting = location.pathname.startsWith('/join/');
 
   useEffect(() => {
     const verifySession = async (sessionToCheck) => {
@@ -190,6 +192,14 @@ function AppContent() {
     return (
       <Routes>
         <Route path="/share/projects/:id" element={<SharedProject />} />
+      </Routes>
+    );
+  }
+
+  if (isJoinMeeting) {
+    return (
+      <Routes>
+        <Route path="/join/:roomId" element={<JoinMeetingRedirect />} />
       </Routes>
     );
   }

@@ -107,15 +107,32 @@ const Meetings = () => {
     setIsStartingCall(false);
     fetchVideoCalls(); // Refresh table
     
-    let mailtoLink = '';
+    let emailSent = false;
     if (externalEmails.trim()) {
-      const subject = encodeURIComponent('Video Meeting Invitation - RYM');
-      const body = encodeURIComponent(
-        `You have been invited to a video meeting with RYM.\n\n` +
-        (callType === 'scheduled' ? `Date: ${scheduledDate}\nTime: ${scheduledTime}\n\n` : '') +
-        `Please join using the link below:\nhttps://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${roomName}\n\nLooking forward to speaking with you!`
-      );
-      mailtoLink = `mailto:${externalEmails}?subject=${subject}&body=${body}`;
+      try {
+        const mailerUrl = import.meta.env.VITE_MAILER_URL || 'http://localhost:4000';
+        const res = await fetch(`${mailerUrl}/api/send-invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: externalEmails.trim(),
+            link: `${window.location.origin}/join/${roomName}`,
+            date: scheduledDate,
+            time: scheduledTime,
+            type: callType
+          })
+        });
+        
+        if (res.ok) {
+          emailSent = true;
+          toast.success('Invitations sent to external guests automatically!');
+        } else {
+          toast.error('Failed to send automatic email. Ensure the mailer backend is running.');
+        }
+      } catch (err) {
+        console.error('Email error:', err);
+        toast.error('Failed to send automatic email. Ensure the mailer backend is running on port 4000.');
+      }
     }
 
     if (callType === 'instant' && !externalEmails.trim()) {
@@ -127,11 +144,6 @@ const Meetings = () => {
       // If scheduled or if there's an external email (even instant), show success screen
       setCallTypeForSuccess(callType);
       setGeneratedLink(`${window.location.origin}/video-call/${roomName}`);
-      if (mailtoLink) {
-        setTimeout(() => {
-          window.location.href = mailtoLink;
-        }, 300);
-      }
     }
   };
 
@@ -277,9 +289,9 @@ const Meetings = () => {
                         className="btn-secondary flex items-center gap-1"
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}
                         onClick={() => {
-                          const externalLink = `https://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${call.room_name}`;
+                          const externalLink = `${window.location.origin}/join/${call.room_name}`;
                           navigator.clipboard.writeText(externalLink);
-                          toast.success('External Jitsi link copied! Share this with your client.');
+                          toast.success('Secure meeting link copied! Share this with your client.');
                         }}
                         title="Copy External Meeting Link"
                       >
@@ -381,14 +393,14 @@ const Meetings = () => {
                   Share this public link with any external clients:
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <input type="text" readOnly value={`https://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${generatedLink.split('/').pop()}`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--primary)', fontFamily: 'monospace', fontSize: '0.85rem', outline: 'none' }} />
+                  <input type="text" readOnly value={`${window.location.origin}/join/${generatedLink.split('/').pop()}`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--primary)', fontFamily: 'monospace', fontSize: '0.85rem', outline: 'none' }} />
                   <button 
                     className="btn-primary" 
                     style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
                     onClick={() => {
-                      const externalLink = `https://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${generatedLink.split('/').pop()}`;
+                      const externalLink = `${window.location.origin}/join/${generatedLink.split('/').pop()}`;
                       navigator.clipboard.writeText(externalLink);
-                      toast.success('External link copied!');
+                      toast.success('Secure link copied!');
                     }}
                   >
                     <Copy size={14} /> Copy
@@ -461,7 +473,7 @@ const Meetings = () => {
                       style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-primary)' }}
                     />
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
-                      Separate multiple emails with a comma. Their default email app will open to send the invite.
+                      Separate multiple emails with a comma. An invitation will be sent automatically.
                     </p>
                   </div>
 
