@@ -24,6 +24,8 @@ const Meetings = () => {
   const [scheduledDate, setScheduledDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [scheduledTime, setScheduledTime] = useState('12:00');
   const [generatedLink, setGeneratedLink] = useState('');
+  const [externalEmails, setExternalEmails] = useState('');
+  const [callTypeForSuccess, setCallTypeForSuccess] = useState('instant');
 
   const fetchVideoCalls = async () => {
     setIsLoading(true);
@@ -70,7 +72,7 @@ const Meetings = () => {
 
   const handleStartVideoCall = async (e) => {
     e.preventDefault();
-    if (selectedEmpIds.length === 0) return;
+    if (selectedEmpIds.length === 0 && !externalEmails.trim()) return;
     
     setIsStartingCall(true);
     // Generate a random room name
@@ -81,35 +83,55 @@ const Meetings = () => {
     // Insert into video_calls table
     await supabaseAdmin.from('video_calls').insert([{
       admin_id: user?.id,
-      employee_id: selectedEmpIds[0], // primary invitee
+      employee_id: selectedEmpIds.length > 0 ? selectedEmpIds[0] : null, // primary invitee
       room_name: roomName,
       status: callType === 'instant' ? 'active' : `scheduled for ${scheduledDate} ${scheduledTime}`
     }]);
 
     // Notify all selected employees
-    const notifications = selectedEmpIds.map(empId => ({
-      user_id: empId,
-      title: callType === 'instant' ? 'Incoming Video Call' : `Scheduled Video Call`,
-      message: callType === 'instant' 
-        ? 'The admin has invited you to a live video meeting.' 
-        : `A video meeting has been scheduled for ${scheduledDate} at ${scheduledTime}.`,
-      type: 'call',
-      link: `/video-call/${roomName}`
-    }));
-    
-    await supabaseAdmin.from('notifications').insert(notifications);
-    await triggerPushNotification(notifications);
+    if (selectedEmpIds.length > 0) {
+      const notifications = selectedEmpIds.map(empId => ({
+        user_id: empId,
+        title: callType === 'instant' ? 'Incoming Video Call' : `Scheduled Video Call`,
+        message: callType === 'instant' 
+          ? 'The admin has invited you to a live video meeting.' 
+          : `A video meeting has been scheduled for ${scheduledDate} at ${scheduledTime}.`,
+        type: 'call',
+        link: `/video-call/${roomName}`
+      }));
+      
+      await supabaseAdmin.from('notifications').insert(notifications);
+      await triggerPushNotification(notifications);
+    }
 
     setIsStartingCall(false);
     fetchVideoCalls(); // Refresh table
     
-    if (callType === 'instant') {
+    let mailtoLink = '';
+    if (externalEmails.trim()) {
+      const subject = encodeURIComponent('Video Meeting Invitation - RYM');
+      const body = encodeURIComponent(
+        `You have been invited to a video meeting with RYM.\n\n` +
+        (callType === 'scheduled' ? `Date: ${scheduledDate}\nTime: ${scheduledTime}\n\n` : '') +
+        `Please join using the link below:\nhttps://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${roomName}\n\nLooking forward to speaking with you!`
+      );
+      mailtoLink = `mailto:${externalEmails}?subject=${subject}&body=${body}`;
+    }
+
+    if (callType === 'instant' && !externalEmails.trim()) {
       setShowVideoModal(false);
       setSelectedEmpIds([]); // reset
+      setExternalEmails('');
       navigate(`/video-call/${roomName}`);
     } else {
-      // If scheduled, just show the generated link
+      // If scheduled or if there's an external email (even instant), show success screen
+      setCallTypeForSuccess(callType);
       setGeneratedLink(`${window.location.origin}/video-call/${roomName}`);
+      if (mailtoLink) {
+        setTimeout(() => {
+          window.location.href = mailtoLink;
+        }, 300);
+      }
     }
   };
 
@@ -143,6 +165,7 @@ const Meetings = () => {
     setGeneratedLink('');
     setCallType('instant');
     setSelectedEmpIds([]);
+    setExternalEmails('');
   };
 
   const toggleParticipants = async (callId, roomName) => {
@@ -352,9 +375,10 @@ const Meetings = () => {
             
             {generatedLink ? (
               <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                <h4 style={{ color: 'var(--success)', marginBottom: '1rem' }}>Meeting Scheduled Successfully!</h4>
+                <h4 style={{ color: 'var(--success)', marginBottom: '1rem' }}>Meeting {callTypeForSuccess === 'instant' ? 'Created' : 'Scheduled'} Successfully!</h4>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                  The employees have been notified. Share this public link with any external clients:
+                  {selectedEmpIds.length > 0 ? 'The employees have been notified. ' : ''}
+                  Share this public link with any external clients:
                 </p>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <input type="text" readOnly value={`https://8x8.vc/vpaas-magic-cookie-df0279ea8bd9405fa9607ecfdca150ff/${generatedLink.split('/').pop()}`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--primary)', fontFamily: 'monospace', fontSize: '0.85rem', outline: 'none' }} />
@@ -370,7 +394,17 @@ const Meetings = () => {
                     <Copy size={14} /> Copy
                   </button>
                 </div>
-                <button className="btn-secondary mt-4" onClick={resetModal}>Close</button>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+                  <button className="btn-secondary" onClick={resetModal}>Close</button>
+                  {callTypeForSuccess === 'instant' && (
+                    <button className="btn-primary flex items-center gap-2" onClick={() => {
+                      resetModal();
+                      navigate(`/video-call/${generatedLink.split('/').pop()}`);
+                    }}>
+                      <Video size={16} /> Join Call Now
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -415,8 +449,24 @@ const Meetings = () => {
                     </div>
                   )}
 
+                  {/* External Guests Input */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>External Guests Email (Optional)</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="e.g. client@example.com, another@test.com" 
+                      value={externalEmails} 
+                      onChange={(e) => setExternalEmails(e.target.value)} 
+                      style={{ width: '100%', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-primary)' }}
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
+                      Separate multiple emails with a comma. Their default email app will open to send the invite.
+                    </p>
+                  </div>
+
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Select Employees (Multiple allowed)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Select Employees (Optional if external guest added)</label>
                 <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
                   {employees.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '1rem', textAlign: 'center' }}>No employees found.</div>
@@ -459,7 +509,7 @@ const Meetings = () => {
 
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                     <button type="button" onClick={resetModal} className="btn-close" style={{ margin: 0, padding: '0.6rem 1rem' }}>Cancel</button>
-                    <button type="submit" disabled={isStartingCall || selectedEmpIds.length === 0} className="btn-primary" style={{ padding: '0.6rem 1rem' }}>
+                    <button type="submit" disabled={isStartingCall || (selectedEmpIds.length === 0 && !externalEmails.trim())} className="btn-primary" style={{ padding: '0.6rem 1rem' }}>
                       {isStartingCall ? 'Processing...' : callType === 'instant' ? 'Connect Now' : 'Schedule Meeting'}
                     </button>
                   </div>
