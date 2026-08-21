@@ -115,7 +115,7 @@ const Meetings = () => {
         try {
           const templateParams = {
             to_email: externalEmails.trim(),
-            meeting_link: `${window.location.origin}/join/${roomName}`,
+            meeting_link: `https://meet.jit.si/${roomName}`,
             meeting_date: scheduledDate || 'Now',
             meeting_time: scheduledTime || 'Now',
             call_type: callType
